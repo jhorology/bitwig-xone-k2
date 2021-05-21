@@ -4,24 +4,20 @@ import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.CursorTrack;
 import com.bitwig.extension.controller.api.TrackBank;
 import com.bitwig.extension.controller.api.Transport;
-import com.github.jhorology.bitwig.control.Control;
+import com.github.jhorology.bitwig.control.Layer;
+import com.github.jhorology.bitwig.xone.k2.XoneK2Control;
+import com.github.jhorology.bitwig.xone.k2.XoneK2LedState;
 
-// TODO no ideas
-public abstract class AbstractLayer {
-  protected ControllerHost host;
-
+abstract class AbstractLayer extends Layer<XoneK2Control, XoneK2LedState> {
+  private static AbstractLayer instance;
   // shared modules
   private static Transport transport;
   private static CursorTrack cursorTrack;
   private static TrackBank trackBank;
 
   protected AbstractLayer(ControllerHost host) {
-    this.host = host;
+    super(host);
   }
-
-  protected abstract Control[] use();
-
-  public abstract void start();
 
   protected Transport getTransport() {
     if (transport == null) {

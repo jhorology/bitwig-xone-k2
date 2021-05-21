@@ -49,16 +49,16 @@ public class Hook {
     subscriptions.add(subscription);
     if (subscriptions.size() == 1) {
       if (observer instanceof BooleanValueChangedCallback) {
-        LOG.info("subscribe BooleanValue:[{} hashCode:{}].", subscribable, subscribable.hashCode());
+        LOG.trace("subscribe BooleanValue:[{} hashCode:{}].", subscribable, subscribable.hashCode());
         ((BooleanValue) subscribable)
             .addValueObserver(
                 v -> {
-                  LOG.info("boolean value changed. subscribable:[{}] value:[{}]", subscribable, v);
+                  LOG.trace("boolean value changed. subscribable:[{}] value:[{}]", subscribable, v);
                   subscriptions.forEach(
                       s -> ((BooleanValueChangedCallback) s.observer).valueChanged(v));
                 });
       } else if (observer instanceof IntegerValueChangedCallback) {
-        LOG.info("subscribe IntegerValue:[{} hashCode:{}].", subscribable, subscribable.hashCode());
+        LOG.trace("subscribe IntegerValue:[{} hashCode:{}].", subscribable, subscribable.hashCode());
         ((IntegerValue) subscribable)
             .addValueObserver(
                 v -> {
@@ -67,16 +67,16 @@ public class Hook {
                       s -> ((IntegerValueChangedCallback) s.observer).valueChanged(v));
                 });
       } else if (observer instanceof DoubleValueChangedCallback) {
-        LOG.info("subscribe DoubleValue:[{} hashCode:{}].", subscribable, subscribable.hashCode());
+        LOG.trace("subscribe DoubleValue:[{} hashCode:{}].", subscribable, subscribable.hashCode());
         ((DoubleValue) subscribable)
             .addValueObserver(
                 v -> {
-                  LOG.info("double value changed. subscribable:[{}] value:[{}]", subscribable, v);
+                  LOG.trace("double value changed. subscribable:[{}] value:[{}]", subscribable, v);
                   subscriptions.forEach(
                       s -> ((DoubleValueChangedCallback) s.observer).valueChanged(v));
                 });
       } else if (observer instanceof StringValueChangedCallback) {
-        LOG.info("subscribe StringValue:[{} hashCode:{}].", subscribable, subscribable.hashCode());
+        LOG.trace("subscribe StringValue:[{} hashCode:{}].", subscribable, subscribable.hashCode());
         ((StringValue) subscribable)
             .addValueObserver(
                 v -> {
