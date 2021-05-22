@@ -24,7 +24,7 @@ public abstract class Layer<T extends Control<T, L>, L extends InternalHardwareL
     this.layers = layers;
   }
 
-  void init() {
+  void initialize() {
     initializing = true;
     controls = new HashSet<>();
     // call setup() within ControllerExtension#init():
@@ -34,6 +34,10 @@ public abstract class Layer<T extends Control<T, L>, L extends InternalHardwareL
     setup();
     clearBindings();
     initializing = false;
+  }
+
+  void dispose(){
+    clearBindings();
   }
 
   protected void use(Control<T, L> control) {
@@ -61,6 +65,4 @@ public abstract class Layer<T extends Control<T, L>, L extends InternalHardwareL
         .filter(c -> !excludeCommonControls || !c.isCommon())
         .forEach(Control::clearBindings);
   }
-
-  void clearBindingsWithoutCommon() {}
 }

@@ -117,7 +117,7 @@ public class XoneK2Control extends Control<XoneK2Control, XoneK2LedState> {
 
   // TODO MIDI channel should be configurable.
   private static final int MIDI_CH = 0;
-  private static final int RELATIVE_VALUE_PER_ROTAION = 30;
+  private static final int RELATIVE_AMOUNT_PER_ROTATION = 30;
   private final int spec;
   private final int note;
   private final int cc;
@@ -135,12 +135,18 @@ public class XoneK2Control extends Control<XoneK2Control, XoneK2LedState> {
     this.name = name;
   }
 
+  /**
+   * initialize.
+   */
   public static void init(HardwareSurface surface, MidiIn midiIn, MidiOut midiOut) {
-    Stream.of(ALL).forEach(c -> c.setup(surface, midiIn, midiOut));
+    Stream.of(ALL).forEach(c -> c.initialize(surface, midiIn, midiOut));
   }
 
+  /**
+   * finalize.
+   */
   public static void exit() {
-    Stream.of(ALL).forEach(Control::clearBindings);
+    Stream.of(ALL).forEach(XoneK2Control::dispose);
   }
 
   /**
@@ -215,7 +221,7 @@ public class XoneK2Control extends Control<XoneK2Control, XoneK2LedState> {
   @Override
   protected RelativeHardwareValueMatcher createRelValueMatcher(MidiIn midiIn) {
     LOG.trace("## [{}] createRelValueMatcher() cc={}", name(), cc);
-    return midiIn.createRelative2sComplementCCValueMatcher(MIDI_CH, cc, RELATIVE_VALUE_PER_ROTAION);
+    return midiIn.createRelative2sComplementCCValueMatcher(MIDI_CH, cc, RELATIVE_AMOUNT_PER_ROTATION);
   }
 
   /** {@inheritDoc} */

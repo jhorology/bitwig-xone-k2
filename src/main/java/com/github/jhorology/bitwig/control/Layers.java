@@ -10,32 +10,41 @@ import java.util.stream.Stream;
 
 public class Layers<T extends Control<T, L>, L extends InternalHardwareLightState> {
   private static final Logger LOG = LoggerFactory.getLogger(Layers.class);
-  private final Map<String, Layer<T, L>> layers;
+  private final Map<Class<?>, Layer<T, L>> layers;
 
   // TODO support multiple stacked layer
   // TODO support multiple part of surface
   private Layer<T, L> baseLayer;
   private Layer<T, L> overlay;
 
+  @SafeVarargs
   public Layers(Layer<T, L>... layers) {
     this.layers =
         Stream.of(layers)
           .peek(l -> l.setLayers(this))
           .peek(l -> LOG.trace("Layer[class={}] is registered.", l.getClass()))
-          .collect(Collectors.toMap(l-> l.getClass().getName(), l -> l));
+          .collect(Collectors.toMap(Layer<T, L>::getClass, l -> l));
     LOG.trace("total [{}] layers are registered.", this.layers.size());
   }
 
+  /**
+   *  initialize.
+   *  this method should be called at extension's start of lifecycle.
+   */
   public void init() {
-    layers.values().forEach(Layer::init);
+    layers.values().forEach(Layer::initialize);
   }
 
+  /**
+   *  finalize.
+   *  this method should be called at extension's end of lifecycle.
+   */
   public void exit() {
     if (overlay != null) {
-      overlay.clearBindings();
+      overlay.dispose();
     }
     if (baseLayer != null) {
-      baseLayer.clearBindings();
+      baseLayer.dispose();
     }
     layers.clear();
     baseLayer = null;
@@ -54,12 +63,12 @@ public class Layers<T extends Control<T, L>, L extends InternalHardwareLightStat
   }
 
   public void activate(Class<?> clazz) {
-    LOG.trace("activate layer[{}]", clazz.getName());
-    Layer<T, L> layer = layers.get(clazz.getName());
+    Layer<T, L> layer = layers.get(clazz);
     if (layer == null) {
-      throw new IllegalStateException("The Layer[class=" + clazz.getName() + "] doesn't exist.");
+      throw new IllegalStateException("The Layer[class=" + clazz.getName() + "] is not registered.");
     }
     activate(layer);
+    LOG.trace("activate layer[{}].", clazz.getName());
   }
 
   public void activate(Layer<T, L> layer) {

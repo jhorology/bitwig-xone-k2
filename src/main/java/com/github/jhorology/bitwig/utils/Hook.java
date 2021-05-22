@@ -20,6 +20,10 @@ public class Hook {
     void unsubscribe();
   }
 
+  /**
+   *
+   * @param <T>
+   */
   private static class SubscriptionImpl<T extends ValueChangedCallback> implements Subscription {
     private final Value<T> subscribable;
     private final T observer;
@@ -38,9 +42,17 @@ public class Hook {
       if (subscriptions == null || subscriptions.isEmpty()) {
         subscribable.unsubscribe();
       }
+      LOG.trace("unsubscribe Value:[{} hashCode:{}]. total {} subscriptions.", subscribable, subscribable.hashCode(), subscriptions.size());
     }
   }
 
+  /**
+   * Subscribe the value object.
+   * @param subscribable A subscribable value object of Bitwig API.
+   * @param observer A instance of extended type of ValuchangedcallBack
+   * @param <T> extended type of ValuChangedCallback
+   * @return a instance of Subscription.
+   */
   public static <T extends ValueChangedCallback> Subscription subscribe(
       Value<T> subscribable, T observer) {
     List<SubscriptionImpl<?>> subscriptions =
@@ -49,7 +61,7 @@ public class Hook {
     subscriptions.add(subscription);
     if (subscriptions.size() == 1) {
       if (observer instanceof BooleanValueChangedCallback) {
-        LOG.trace("subscribe BooleanValue:[{} hashCode:{}].", subscribable, subscribable.hashCode());
+        LOG.trace("subscribe BooleanValue:[{} hashCode:{}]. total {} subscriptions.", subscribable, subscribable.hashCode(), subscriptions.size());
         ((BooleanValue) subscribable)
             .addValueObserver(
                 v -> {
@@ -58,7 +70,7 @@ public class Hook {
                       s -> ((BooleanValueChangedCallback) s.observer).valueChanged(v));
                 });
       } else if (observer instanceof IntegerValueChangedCallback) {
-        LOG.trace("subscribe IntegerValue:[{} hashCode:{}].", subscribable, subscribable.hashCode());
+        LOG.trace("subscribe IntegerValue:[{} hashCode:{}]. total {} subscriptions.", subscribable, subscribable.hashCode(), subscriptions.size());
         ((IntegerValue) subscribable)
             .addValueObserver(
                 v -> {
@@ -67,7 +79,7 @@ public class Hook {
                       s -> ((IntegerValueChangedCallback) s.observer).valueChanged(v));
                 });
       } else if (observer instanceof DoubleValueChangedCallback) {
-        LOG.trace("subscribe DoubleValue:[{} hashCode:{}].", subscribable, subscribable.hashCode());
+        LOG.trace("subscribe DoubleValue:[{} hashCode:{}]. total {} subscriptions.", subscribable, subscribable.hashCode(), subscriptions.size());
         ((DoubleValue) subscribable)
             .addValueObserver(
                 v -> {
@@ -85,7 +97,8 @@ public class Hook {
                       s -> ((StringValueChangedCallback) s.observer).valueChanged(v));
                 });
       } else {
-        throw new UnsupportedOperationException("Unsupported Value type.");
+        LOG.error("unsupported value tyep [{} hashCode:{}].", subscribable, subscribable.hashCode());
+        throw new UnsupportedOperationException("Unsupported Value type[" + subscribable + "].");
       }
       subscribable.subscribe();
     }

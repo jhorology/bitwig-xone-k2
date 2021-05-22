@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
 /**
  * A base skeleton class for composite control element of MIDI control surface.
  *
- * @param <T> extended control type.
+ * @param <T> extended control type(recursive generics type).
  * @param <L> extended type of InternalHardwareLightState.
  */
 public abstract class Control<T extends Control<T, L>, L extends InternalHardwareLightState> {
@@ -44,22 +44,23 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
   private final List<Consumer<Double>> absValueHandlers;
   private final List<HardwareBinding> bindings;
   private final List<Hook.Subscription> subscriptions;
+  private final List<Hook.Subscription> internalSubscriptions;
   //
   private double absValue;
   private boolean pressed;
 
   private MidiOut midiOut;
 
-  /** */
+  /** Control has behavior of button. */
   protected static final int BUTTON = 0x01;
 
-  /** */
+  /** Control has behavior of encoder. */
   protected static final int ENCODER = 0x2;
 
-  /** */
+  /** encoders value is relative. */
   protected static final int RELATIVE = 0x4;
 
-  /** */
+  /** Control has behavior of LED. */
   protected static final int LED = 0x8;
 
   /** common control, exclude from layer management. */
@@ -83,12 +84,13 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
     this.releasedHandlers = new ArrayList<>();
     this.absValueHandlers = new ArrayList<>();
     this.subscriptions = new ArrayList<>();
+    this.internalSubscriptions = new ArrayList<>();
     this.bindings = new ArrayList<>();
   }
 
   /**
    * Returns a name of this control.
-   *
+   * name should be unique.
    * @return name of this control
    */
   protected abstract String name();
@@ -124,7 +126,7 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
   protected abstract HardwareActionMatcher createReleasedActionMatcher(MidiIn midiIn);
 
   /**
-   * Create a matcher for value of relative encoder.
+   * Create a matcher for absolute encoder.
    *
    * @param midiIn a Midi input port.
    * @return a matcher
@@ -132,7 +134,7 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
   protected abstract AbsoluteHardwareValueMatcher createAbsValueMatcher(MidiIn midiIn);
 
   /**
-   * Create a matcher for value of relative encoder.
+   * Create a matcher for relative encoder.
    *
    * @param midiIn a Midi input port.
    * @return a matcher
@@ -142,8 +144,11 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
   /** send MIDI messages to control LED. */
   protected abstract void sendLedState(L state, MidiOut midiOut);
 
-  /** initialize class method for framework. */
-  protected void setup(HardwareSurface surface, MidiIn midiIn, MidiOut midiOut) {
+  /**
+   * initialize.
+   * this method should be called in inheried class at extension's start of lifecycle.
+   */
+  protected void initialize(HardwareSurface surface, MidiIn midiIn, MidiOut midiOut) {
     this.midiOut = midiOut;
     if (isButton()) {
       LOG.trace("[{}] control is button.", name());
@@ -162,6 +167,16 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
       this.led = createLed(surface);
     }
   }
+
+  /**
+   * finalize.
+   * this method should be called in inheried class at extension's end of lifecycle.
+   */
+  protected void dispose() {
+    clearBindings();
+    clearInternalSubscriptions();
+  }
+
 
   /**
    * Add a handler for button pressed event.
@@ -541,7 +556,7 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
     HardwareButton btn = surface.createHardwareButton(name() + BUTTON_SUFFIX);
     btn.pressedAction().setActionMatcher(createPressedActionMatcher(midiIn));
     btn.releasedAction().setActionMatcher(createReleasedActionMatcher(midiIn));
-    subscriptions.add(
+    internalSubscriptions.add(
         Hook.subscribe(
             btn.isPressed(),
             pressed -> {
@@ -558,7 +573,7 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
       knob.setHardwareButton(button);
     }
     knob.setAdjustValueMatcher(createAbsValueMatcher(midiIn));
-    subscriptions.add(
+    internalSubscriptions.add(
         Hook.subscribe(
             knob.value(),
             value -> {
@@ -585,5 +600,11 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
     led.state().onUpdateHardware(state -> sendLedState((L) state, midiOut));
     // TODO blinking
     return led;
+  }
+
+  private void clearInternalSubscriptions() {
+    Collections.reverse(internalSubscriptions);
+    internalSubscriptions.forEach(Hook.Subscription::unsubscribe);
+    internalSubscriptions.clear();
   }
 }
