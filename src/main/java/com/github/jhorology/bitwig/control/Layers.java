@@ -1,12 +1,11 @@
 package com.github.jhorology.bitwig.control;
 
 import com.bitwig.extension.controller.api.InternalHardwareLightState;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Layers<T extends Control<T, L>, L extends InternalHardwareLightState> {
   private static final Logger LOG = LoggerFactory.getLogger(Layers.class);
@@ -21,24 +20,18 @@ public class Layers<T extends Control<T, L>, L extends InternalHardwareLightStat
   public Layers(Layer<T, L>... layers) {
     this.layers =
         Stream.of(layers)
-          .peek(l -> l.setLayers(this))
-          .peek(l -> LOG.trace("Layer[class={}] is registered.", l.getClass()))
-          .collect(Collectors.toMap(Layer<T, L>::getClass, l -> l));
+            .peek(l -> l.setLayers(this))
+            .peek(l -> LOG.trace("Layer[class={}] is registered.", l.getClass()))
+            .collect(Collectors.toMap(Layer<T, L>::getClass, l -> l));
     LOG.trace("total [{}] layers are registered.", this.layers.size());
   }
 
-  /**
-   *  initialize.
-   *  this method should be called at extension's start of lifecycle.
-   */
+  /** initialize. this method should be called at extension's start of lifecycle. */
   public void init() {
     layers.values().forEach(Layer::initialize);
   }
 
-  /**
-   *  finalize.
-   *  this method should be called at extension's end of lifecycle.
-   */
+  /** finalize. this method should be called at extension's end of lifecycle. */
   public void exit() {
     if (overlay != null) {
       overlay.dispose();
@@ -65,7 +58,8 @@ public class Layers<T extends Control<T, L>, L extends InternalHardwareLightStat
   public void activate(Class<?> clazz) {
     Layer<T, L> layer = layers.get(clazz);
     if (layer == null) {
-      throw new IllegalStateException("The Layer[class=" + clazz.getName() + "] is not registered.");
+      throw new IllegalStateException(
+          "The Layer[class=" + clazz.getName() + "] is not registered.");
     }
     activate(layer);
     LOG.trace("activate layer[{}].", clazz.getName());

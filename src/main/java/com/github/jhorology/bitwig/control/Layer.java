@@ -36,7 +36,7 @@ public abstract class Layer<T extends Control<T, L>, L extends InternalHardwareL
     initializing = false;
   }
 
-  void dispose(){
+  void dispose() {
     clearBindings();
   }
 
@@ -46,7 +46,8 @@ public abstract class Layer<T extends Control<T, L>, L extends InternalHardwareL
     }
   }
 
-  protected void use(Control<T, L>... controls) {
+  @SafeVarargs
+  protected final void use(Control<T, L>... controls) {
     if (initializing) {
       this.controls.addAll(Arrays.asList(controls));
     }

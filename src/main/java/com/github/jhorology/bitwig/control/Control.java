@@ -89,8 +89,8 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
   }
 
   /**
-   * Returns a name of this control.
-   * name should be unique.
+   * Returns a name of this control. name should be unique.
+   *
    * @return name of this control
    */
   protected abstract String name();
@@ -145,8 +145,11 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
   protected abstract void sendLedState(L state, MidiOut midiOut);
 
   /**
-   * initialize.
-   * this method should be called in inheried class at extension's start of lifecycle.
+   * initialize. this method should be called in inherited class at extension's start of lifecycle.
+   *
+   * @param surface
+   * @param midiIn A MIDI input port
+   * @param midiOut A MIDI output port, nullable when control doesn't have LED.
    */
   protected void initialize(HardwareSurface surface, MidiIn midiIn, MidiOut midiOut) {
     this.midiOut = midiOut;
@@ -168,15 +171,11 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
     }
   }
 
-  /**
-   * finalize.
-   * this method should be called in inheried class at extension's end of lifecycle.
-   */
+  /** finalize. this method should be called in inherited class at extension's end of lifecycle. */
   protected void dispose() {
     clearBindings();
     clearInternalSubscriptions();
   }
-
 
   /**
    * Add a handler for button pressed event.
@@ -273,7 +272,7 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
                 (BooleanValue) target, v -> led.state().setValue(v ? onState : offState)));
       }
     } catch (Throwable ex) {
-      LOG.error("error control[{}]. {}", name(), ex);
+      LOG.error("[" + name() + "]", ex);
     }
     return (T) this;
   }

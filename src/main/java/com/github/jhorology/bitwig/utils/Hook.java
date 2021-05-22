@@ -16,11 +16,13 @@ public class Hook {
   private static final HashMap<Value<? extends ValueChangedCallback>, List<SubscriptionImpl<?>>>
       hooks = new HashMap<>();
 
+  /** An interface of unsubscribable subscription of Value object. */
   public static interface Subscription {
     void unsubscribe();
   }
 
   /**
+   * An interface o
    *
    * @param <T>
    */
@@ -42,12 +44,17 @@ public class Hook {
       if (subscriptions == null || subscriptions.isEmpty()) {
         subscribable.unsubscribe();
       }
-      LOG.trace("unsubscribe Value:[{} hashCode:{}]. total {} subscriptions.", subscribable, subscribable.hashCode(), subscriptions.size());
+      LOG.trace(
+          "unsubscribe Value:[{} hashCode:{}]. total {} subscriptions.",
+          subscribable,
+          subscribable.hashCode(),
+          subscriptions.size());
     }
   }
 
   /**
    * Subscribe the value object.
+   *
    * @param subscribable A subscribable value object of Bitwig API.
    * @param observer A instance of extended type of ValuchangedcallBack
    * @param <T> extended type of ValuChangedCallback
@@ -61,43 +68,76 @@ public class Hook {
     subscriptions.add(subscription);
     if (subscriptions.size() == 1) {
       if (observer instanceof BooleanValueChangedCallback) {
-        LOG.trace("subscribe BooleanValue:[{} hashCode:{}]. total {} subscriptions.", subscribable, subscribable.hashCode(), subscriptions.size());
+        LOG.trace(
+            "subscribe BooleanValue:[{} hashCode:{}]. total {} subscriptions.",
+            subscribable,
+            subscribable.hashCode(),
+            subscriptions.size());
         ((BooleanValue) subscribable)
             .addValueObserver(
                 v -> {
-                  LOG.trace("boolean value changed. subscribable:[{}] value:[{}]", subscribable, v);
+                  LOG.trace(
+                      "boolean value changed. subscribable:[{}] value:[{}], total {} subscriptions.",
+                      subscribable,
+                      v,
+                      subscriptions.size());
                   subscriptions.forEach(
                       s -> ((BooleanValueChangedCallback) s.observer).valueChanged(v));
                 });
       } else if (observer instanceof IntegerValueChangedCallback) {
-        LOG.trace("subscribe IntegerValue:[{} hashCode:{}]. total {} subscriptions.", subscribable, subscribable.hashCode(), subscriptions.size());
+        LOG.trace(
+            "subscribe IntegerValue:[{} hashCode:{}]. total {} subscriptions.",
+            subscribable,
+            subscribable.hashCode(),
+            subscriptions.size());
         ((IntegerValue) subscribable)
             .addValueObserver(
                 v -> {
-                  LOG.info("integer value changed. subscribable:[{}] value:[{}]", subscribable, v);
+                  LOG.info(
+                      "integer value changed. subscribable:[{}] value:[{}], total {} subscriptions.",
+                      subscribable,
+                      v,
+                      subscriptions.size());
                   subscriptions.forEach(
                       s -> ((IntegerValueChangedCallback) s.observer).valueChanged(v));
                 });
       } else if (observer instanceof DoubleValueChangedCallback) {
-        LOG.trace("subscribe DoubleValue:[{} hashCode:{}]. total {} subscriptions.", subscribable, subscribable.hashCode(), subscriptions.size());
+        LOG.trace(
+            "subscribe DoubleValue:[{} hashCode:{}], total {} subscriptions.",
+            subscribable,
+            subscribable.hashCode(),
+            subscriptions.size());
         ((DoubleValue) subscribable)
             .addValueObserver(
                 v -> {
-                  LOG.trace("double value changed. subscribable:[{}] value:[{}]", subscribable, v);
+                  LOG.trace(
+                      "double value changed. subscribable:[{}] value:[{}], total {} subscriptions.",
+                      subscribable,
+                      v,
+                      subscriptions.size());
                   subscriptions.forEach(
                       s -> ((DoubleValueChangedCallback) s.observer).valueChanged(v));
                 });
       } else if (observer instanceof StringValueChangedCallback) {
-        LOG.trace("subscribe StringValue:[{} hashCode:{}].", subscribable, subscribable.hashCode());
+        LOG.trace(
+            "subscribe StringValue:[{} hashCode:{}], total {} subscriptions.",
+            subscribable,
+            subscribable.hashCode(),
+            subscriptions.size());
         ((StringValue) subscribable)
             .addValueObserver(
                 v -> {
-                  LOG.info("string value changed. subscribable:[{}] value:[{}]", subscribable, v);
+                  LOG.info(
+                      "string value changed. subscribable:[{}] value:[{}], total {} subscriptions.",
+                      subscribable,
+                      v,
+                      subscriptions.size());
                   subscriptions.forEach(
                       s -> ((StringValueChangedCallback) s.observer).valueChanged(v));
                 });
       } else {
-        LOG.error("unsupported value tyep [{} hashCode:{}].", subscribable, subscribable.hashCode());
+        LOG.error(
+            "unsupported value tyep [{} hashCode:{}].", subscribable, subscribable.hashCode());
         throw new UnsupportedOperationException("Unsupported Value type[" + subscribable + "].");
       }
       subscribable.subscribe();

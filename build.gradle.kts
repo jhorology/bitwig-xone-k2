@@ -29,7 +29,7 @@ dependencies {
   implementation("org.slf4j:slf4j-api:1.7.30")
 
   // development build
-  if (hasProperty("dev")) {
+  if (project.hasProperty("dev")) {
     implementation("ch.qos.logback:logback-core:1.2.3")
     implementation("ch.qos.logback:logback-classic:1.2.3")
   }
@@ -48,6 +48,9 @@ tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJ
     // exclude provided dependencies
     exclude(dependency("com.bitwig:extension-api:13"))
     exclude(dependency("org.apache.commons:commons-lang3:3.5"))
+    if(!project.hasProperty("dev")) {
+      exclude("logback.xml");
+    }
   }
 }
 
@@ -64,9 +67,9 @@ tasks.register<Copy>("installBwExtension") {
 //   gradle -Pdev start
 tasks.register<Exec>("start") {
   dependsOn("installBwExtension")
+  if (project.hasProperty("dev")) {
+     environment("BITWIG_DEBUG_PORT", 8989)
+  }
   // TODO platform specific
   commandLine("/Applications/Bitwig Studio.app/Contents/MacOS/BitwigStudio")
-  if (hasProperty("dev")) {
-    environment("BITWIG_DEBUG_PORT", 8989)
-  }
 }

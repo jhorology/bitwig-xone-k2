@@ -6,6 +6,10 @@ build
 
 # Intellij project configuration
 .idea
+.run
+
+# visual Studio Code configuration
+.vscode
 
 # misc temporary/backup files
 .DS_Store

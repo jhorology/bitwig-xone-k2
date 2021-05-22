@@ -135,16 +135,12 @@ public class XoneK2Control extends Control<XoneK2Control, XoneK2LedState> {
     this.name = name;
   }
 
-  /**
-   * initialize.
-   */
+  /** initialize. */
   public static void init(HardwareSurface surface, MidiIn midiIn, MidiOut midiOut) {
     Stream.of(ALL).forEach(c -> c.initialize(surface, midiIn, midiOut));
   }
 
-  /**
-   * finalize.
-   */
+  /** finalize. */
   public static void exit() {
     Stream.of(ALL).forEach(XoneK2Control::dispose);
   }
@@ -220,8 +216,8 @@ public class XoneK2Control extends Control<XoneK2Control, XoneK2LedState> {
   /** {@inheritDoc} */
   @Override
   protected RelativeHardwareValueMatcher createRelValueMatcher(MidiIn midiIn) {
-    LOG.trace("## [{}] createRelValueMatcher() cc={}", name(), cc);
-    return midiIn.createRelative2sComplementCCValueMatcher(MIDI_CH, cc, RELATIVE_AMOUNT_PER_ROTATION);
+    return midiIn.createRelative2sComplementCCValueMatcher(
+        MIDI_CH, cc, RELATIVE_AMOUNT_PER_ROTATION);
   }
 
   /** {@inheritDoc} */
