@@ -18,43 +18,49 @@ public class XoneK2LedState extends InternalHardwareLightState {
   /** LED red state. */
   public static final XoneK2LedState RED =
       new XoneK2LedState("RED", HardwareLightVisualState.createForColor(RED_COLOR));
-  /** LED red blinking state. */
-  public static final XoneK2LedState RED_BLINK =
-      new XoneK2LedState(
-          "RED_BLINK",
-          HardwareLightVisualState.createBlinking(
-              RED_COLOR, GRAY_COLOR, BLINK_ON_SEC, BLINK_OFF_SEC));
-  /** LED red blinking on beat. */
-  public static final XoneK2LedState RED_BEAT =
-      new XoneK2LedState(
-          "RED_BEAT",
-          HardwareLightVisualState.createBlinking(
-              RED_COLOR, GRAY_COLOR, BLINK_ON_SEC, BLINK_OFF_SEC));
   /** LED yellow state. */
   public static final XoneK2LedState YELLOW =
       new XoneK2LedState("YELLOW", HardwareLightVisualState.createForColor(YELLOW_COLOR));
 
-  /** LED yellow blinking state. */
-  public static final XoneK2LedState YELLOW_BLINK =
-      new XoneK2LedState(
-          "YELLOW_BLINK",
-          HardwareLightVisualState.createBlinking(
-              YELLOW_COLOR, GRAY_COLOR, BLINK_ON_SEC, BLINK_OFF_SEC));
-  /** LED yellow blinking on beat. */
-  public static final XoneK2LedState YELLOW_BEAT =
-      new XoneK2LedState(
-          "YELLOW_BEAT",
-          HardwareLightVisualState.createBlinking(
-              YELLOW_COLOR, GRAY_COLOR, BLINK_ON_SEC, BLINK_OFF_SEC));
   /** LED green state. */
   public static final XoneK2LedState GREEN =
       new XoneK2LedState("GREEN", HardwareLightVisualState.createForColor(GREEN_COLOR));
+
+  /** LED red blinking state. */
+  public static final XoneK2LedState RED_BLINK =
+    new XoneK2LedState(
+      "RED_BLINK",
+      HardwareLightVisualState.createBlinking(
+        RED_COLOR, GRAY_COLOR, BLINK_ON_SEC, BLINK_OFF_SEC));
+
+  /** LED red blinking on beat. */
+  public static final XoneK2LedState RED_BEAT =
+    new XoneK2LedState(
+      "RED_BEAT",
+      HardwareLightVisualState.createBlinking(
+        RED_COLOR, GRAY_COLOR, BLINK_ON_SEC, BLINK_OFF_SEC));
+
+  /** LED yellow blinking state. */
+  public static final XoneK2LedState YELLOW_BLINK =
+    new XoneK2LedState(
+      "YELLOW_BLINK",
+      HardwareLightVisualState.createBlinking(
+        YELLOW_COLOR, GRAY_COLOR, BLINK_ON_SEC, BLINK_OFF_SEC));
+
+  /** LED yellow blinking on beat. */
+  public static final XoneK2LedState YELLOW_BEAT =
+    new XoneK2LedState(
+      "YELLOW_BEAT",
+      HardwareLightVisualState.createBlinking(
+        YELLOW_COLOR, GRAY_COLOR, BLINK_ON_SEC, BLINK_OFF_SEC));
+
   /** LED green blinking state. */
   public static final XoneK2LedState GREEN_BLINK =
       new XoneK2LedState(
           "GREEN_BLINK",
           HardwareLightVisualState.createBlinking(
               GREEN_COLOR, GRAY_COLOR, BLINK_ON_SEC, BLINK_OFF_SEC));
+
   /** LED green blinking on beat. */
   public static final XoneK2LedState GREEN_BEAT =
       new XoneK2LedState(
@@ -64,6 +70,7 @@ public class XoneK2LedState extends InternalHardwareLightState {
 
   private final String name;
   private final HardwareLightVisualState visualState;
+  private final XoneK2LedState On
 
   private XoneK2LedState(String name, HardwareLightVisualState visualState) {
     this.name = name;

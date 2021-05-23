@@ -225,17 +225,16 @@ public class XoneK2Control extends Control<XoneK2Control, XoneK2LedState> {
   protected void sendLedState(XoneK2LedState state, MidiOut midiOut) {
     LOG.trace("[{}] led updated to state [{}].", name(), state);
     int noteOffset = this == LAYER || this == SHIFT ? 4 : 36;
-    if (state == OFF) {
-      midiOut.sendMidi(0x90 + MIDI_CH, note, 0);
-      midiOut.sendMidi(0x90 + MIDI_CH, note + noteOffset, 0);
-      midiOut.sendMidi(0x90 + MIDI_CH, note + noteOffset * 2, 0);
-    } else if (state == RED) {
+    if (state == RED) {
       midiOut.sendMidi(0x90 + MIDI_CH, note, 0x7f);
     } else if (state == YELLOW) {
       midiOut.sendMidi(0x90 + MIDI_CH, note + noteOffset, 0x7f);
     } else if (state == GREEN) {
       midiOut.sendMidi(0x90 + MIDI_CH, note + noteOffset * 2, 0x7f);
+    } else {
+      midiOut.sendMidi(0x90 + MIDI_CH, note, 0);
+      midiOut.sendMidi(0x90 + MIDI_CH, note + noteOffset, 0);
+      midiOut.sendMidi(0x90 + MIDI_CH, note + noteOffset * 2, 0);
     }
-    // TODO blinking
   }
 }

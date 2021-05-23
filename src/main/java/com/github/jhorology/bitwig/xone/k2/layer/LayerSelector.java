@@ -17,7 +17,5 @@ public class LayerSelector extends AbstractLayer {
   }
 
   @Override
-  protected void setup() {
-    // TODO
-  }
+  protected void setup() {}
 }

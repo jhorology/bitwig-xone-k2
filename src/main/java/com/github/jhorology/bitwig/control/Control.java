@@ -4,7 +4,9 @@ import com.bitwig.extension.controller.api.AbsoluteHardwarControlBindable;
 import com.bitwig.extension.controller.api.AbsoluteHardwareKnob;
 import com.bitwig.extension.controller.api.AbsoluteHardwareValueMatcher;
 import com.bitwig.extension.controller.api.BooleanValue;
+import com.bitwig.extension.controller.api.HardwareAction;
 import com.bitwig.extension.controller.api.HardwareActionBindable;
+import com.bitwig.extension.controller.api.HardwareActionBinding;
 import com.bitwig.extension.controller.api.HardwareActionMatcher;
 import com.bitwig.extension.controller.api.HardwareBinding;
 import com.bitwig.extension.controller.api.HardwareButton;
@@ -22,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,6 +80,30 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
 
   /** An instance of MultiStateHardwareLight. */
   protected MultiStateHardwareLight led;
+
+  private static class ConditionalActionBindable implements HardwareActionBindable {
+    private final Supplier<Boolean> condition;
+    private final HardwareActionBindable bindable;
+
+    private ConditionalActionBindable(
+        HardwareActionBindable bindable, Supplier<Boolean> condition) {
+      this.condition = condition;
+      this.bindable = bindable;
+    }
+
+    @Override
+    public HardwareActionBinding addBinding(HardwareAction action) {
+      return bindable.addBinding(action);
+    }
+
+    @Override
+    public void invoke() {
+      LOG.info("#### bindable action invoked condition={}", condition.get());
+      if (condition.get()) {
+        bindable.invoke();
+      }
+    }
+  }
 
   /** Constructor. */
   protected Control() {
@@ -178,6 +205,20 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
   }
 
   /**
+   * Set a LED state for button pressed event.
+   *
+   * @param state the LED state when button pressed.
+   * @return this instance
+   */
+  @SuppressWarnings("unchecked")
+  public T onPressed(L state) {
+    if (!isLED()) {
+      throw new UnsupportedOperationException("[" + name() + "] Control doesn't have LED.");
+    }
+    return onPressed(() -> led.state().setValue(state));
+  }
+
+  /**
    * Add a handler for button pressed event.
    *
    * @param handler a handler
@@ -190,36 +231,6 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
           "[" + name() + "] Control doesn't support pressed-action.");
     }
     pressedHandlers.add(handler);
-    return (T) this;
-  }
-
-  /**
-   * Add a handler for button pressed event.
-   *
-   * @param handler a handler
-   * @param onState led state while pressing
-   * @return this instance
-   */
-  public T onPressed(Runnable handler, L onState) {
-    return onPressed(handler, onState, getDefaultLedOffState());
-  }
-
-  /**
-   * Add a handler for button pressed event.
-   *
-   * @param handler A handler
-   * @param onState led state while pressing
-   * @param offState led state while not pressing
-   * @return this instance
-   */
-  @SuppressWarnings("unchecked")
-  public T onPressed(Runnable handler, L onState, L offState) {
-    if (!isButton()) {
-      throw new UnsupportedOperationException(
-          "[" + name() + "] Control doesn't support pressed-action.");
-    }
-    pressedHandlers.add(handler);
-    releasedHandlers.add(() -> led.state().setValue(offState));
     return (T) this;
   }
 
@@ -240,41 +251,57 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
   }
 
   /**
-   * Add a binding for button-pressed-event.
+   * Add a handler for button pressed event.
    *
-   * @param target bindable action
-   * @param onState led state while pressing
+   * @param condition execution condition of handler
+   * @param handler a handler
    * @return this instance
    */
-  public T onPressed(HardwareActionBindable target, L onState) {
-    return onPressed(target, onState, getDefaultLedOffState());
+  @SuppressWarnings("unchecked")
+  public T onPressed(Supplier<Boolean> condition, Runnable handler) {
+    if (!isButton()) {
+      throw new UnsupportedOperationException(
+          "[" + name() + "] Control doesn't support pressed-action.");
+    }
+    pressedHandlers.add(
+        () -> {
+          if (condition.get()) handler.run();
+        });
+    return (T) this;
   }
 
   /**
    * Add a binding for button-pressed-event.
    *
-   * @param target bindable target
-   * @param onState led state when target value is true.
-   * @param offState led state when target value is false.
+   * @param condition execution condition of handler
+   * @param target bindable action
    * @return this instance
    */
   @SuppressWarnings("unchecked")
-  public T onPressed(HardwareActionBindable target, L onState, L offState) {
+  public T onPressed(Supplier<Boolean> condition, HardwareActionBindable target) {
     if (!isButton()) {
       throw new UnsupportedOperationException(
           "[" + name() + "] Control doesn't support pressed-action.");
     }
-    try {
-      bindings.add(target.addBinding(button.pressedAction()));
-      if (target instanceof BooleanValue) {
-        subscriptions.add(
-            Hook.subscribe(
-                (BooleanValue) target, v -> led.state().setValue(v ? onState : offState)));
-      }
-    } catch (Throwable ex) {
-      LOG.error("[" + name() + "]", ex);
-    }
+    pressedHandlers.add(
+        () -> {
+          if (condition.get()) target.invoke();
+        });
     return (T) this;
+  }
+
+  /**
+   * Set a LED state for button released event.
+   *
+   * @param state the LED state when button released.
+   * @return this instance
+   */
+  @SuppressWarnings("unchecked")
+  public T onReleased(L state) {
+    if (!isLED()) {
+      throw new UnsupportedOperationException("[" + name() + "] Control doesn't have LED.");
+    }
+    return onReleased(() -> led.state().setValue(state));
   }
 
   /**
@@ -481,6 +508,15 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
   }
 
   /**
+   * Returns a pressed state of this control.
+   *
+   * @return true while pressing
+   */
+  public boolean isReleased() {
+    return !pressed;
+  }
+
+  /**
    * Returns a current encoder absolute-value of this control.
    *
    * @return last received value(normalized 0.0-1.0).
@@ -560,7 +596,6 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
             btn.isPressed(),
             pressed -> {
               this.pressed = pressed;
-              LOG.trace("[{}] button {}.", name(), pressed ? "pressed" : "released");
               (pressed ? pressedHandlers : releasedHandlers).forEach(Runnable::run);
             }));
     return btn;
@@ -577,7 +612,6 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
             knob.value(),
             value -> {
               absValue = value;
-              LOG.trace("[{}] absolute value is changed to [{}].", name(), value);
               absValueHandlers.forEach(h -> h.accept(value));
             }));
     return knob;

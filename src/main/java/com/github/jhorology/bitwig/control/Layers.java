@@ -33,12 +33,7 @@ public class Layers<T extends Control<T, L>, L extends InternalHardwareLightStat
 
   /** finalize. this method should be called at extension's end of lifecycle. */
   public void exit() {
-    if (overlay != null) {
-      overlay.dispose();
-    }
-    if (baseLayer != null) {
-      baseLayer.dispose();
-    }
+    layers.values().forEach(Layer::dispose);
     layers.clear();
     baseLayer = null;
     overlay = null;
@@ -55,7 +50,7 @@ public class Layers<T extends Control<T, L>, L extends InternalHardwareLightStat
     }
   }
 
-  public void activate(Class<?> clazz) {
+  public void open(Class<?> clazz) {
     Layer<T, L> layer = layers.get(clazz);
     if (layer == null) {
       throw new IllegalStateException(
@@ -65,7 +60,7 @@ public class Layers<T extends Control<T, L>, L extends InternalHardwareLightStat
     LOG.trace("activate layer[{}].", clazz.getName());
   }
 
-  public void activate(Layer<T, L> layer) {
+  private void activate(Layer<T, L> layer) {
     if (overlay != null) {
       overlay.clearBindings();
     }

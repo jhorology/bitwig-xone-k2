@@ -38,17 +38,33 @@ public class Hook {
     @Override
     public void unsubscribe() {
       List<SubscriptionImpl<?>> subscriptions = hooks.get(subscribable);
-      if (subscriptions != null) {
-        subscriptions.remove(observer);
+
+      if (subscriptions == null) {
+        LOG.error("unsubscribe(): value[{}] not found!!", subscribable);
+        return;
       }
-      if (subscriptions == null || subscriptions.isEmpty()) {
-        subscribable.unsubscribe();
+
+      boolean removed = subscriptions.remove(this);
+      if (!removed) {
+        LOG.error(
+            "unsubscribe(): subscription not found!! value:[{}]. subscriptions total {}.",
+            subscribable,
+            subscriptions.size());
+        return;
       }
       LOG.trace(
-          "unsubscribe Value:[{} hashCode:{}]. total {} subscriptions.",
+          "unsubscribe(): subscription was removed, value[{}] subscriptions total {}",
           subscribable,
-          subscribable.hashCode(),
           subscriptions.size());
+
+      if (subscriptions.isEmpty()) {
+        hooks.remove(subscribable);
+        subscribable.unsubscribe();
+        LOG.trace(
+            "unsubscribe(): value[{}] was removed. subscribing values total {}.",
+            subscribable,
+            hooks.keySet().size());
+      }
     }
   }
 
@@ -64,20 +80,13 @@ public class Hook {
       Value<T> subscribable, T observer) {
     List<SubscriptionImpl<?>> subscriptions =
         hooks.computeIfAbsent(subscribable, k -> new ArrayList<>());
-    SubscriptionImpl<T> subscription = new SubscriptionImpl<T>(subscribable, observer);
-    subscriptions.add(subscription);
-    if (subscriptions.size() == 1) {
+    if (subscriptions.size() == 0) {
       if (observer instanceof BooleanValueChangedCallback) {
-        LOG.trace(
-            "subscribe BooleanValue:[{} hashCode:{}]. total {} subscriptions.",
-            subscribable,
-            subscribable.hashCode(),
-            subscriptions.size());
         ((BooleanValue) subscribable)
             .addValueObserver(
                 v -> {
                   LOG.trace(
-                      "boolean value changed. subscribable:[{}] value:[{}], total {} subscriptions.",
+                      "[{}] changed to {}. total subscriptions {}.",
                       subscribable,
                       v,
                       subscriptions.size());
@@ -85,16 +94,11 @@ public class Hook {
                       s -> ((BooleanValueChangedCallback) s.observer).valueChanged(v));
                 });
       } else if (observer instanceof IntegerValueChangedCallback) {
-        LOG.trace(
-            "subscribe IntegerValue:[{} hashCode:{}]. total {} subscriptions.",
-            subscribable,
-            subscribable.hashCode(),
-            subscriptions.size());
         ((IntegerValue) subscribable)
             .addValueObserver(
                 v -> {
-                  LOG.info(
-                      "integer value changed. subscribable:[{}] value:[{}], total {} subscriptions.",
+                  LOG.trace(
+                      "[{}] changed to {}. total subscriptions {}.",
                       subscribable,
                       v,
                       subscriptions.size());
@@ -102,16 +106,11 @@ public class Hook {
                       s -> ((IntegerValueChangedCallback) s.observer).valueChanged(v));
                 });
       } else if (observer instanceof DoubleValueChangedCallback) {
-        LOG.trace(
-            "subscribe DoubleValue:[{} hashCode:{}], total {} subscriptions.",
-            subscribable,
-            subscribable.hashCode(),
-            subscriptions.size());
         ((DoubleValue) subscribable)
             .addValueObserver(
                 v -> {
                   LOG.trace(
-                      "double value changed. subscribable:[{}] value:[{}], total {} subscriptions.",
+                      "[{}] changed to {}. total subscriptions {}.",
                       subscribable,
                       v,
                       subscriptions.size());
@@ -127,8 +126,8 @@ public class Hook {
         ((StringValue) subscribable)
             .addValueObserver(
                 v -> {
-                  LOG.info(
-                      "string value changed. subscribable:[{}] value:[{}], total {} subscriptions.",
+                  LOG.trace(
+                      "[{}] changed to {}. total subscriptions {}.",
                       subscribable,
                       v,
                       subscriptions.size());
@@ -136,12 +135,16 @@ public class Hook {
                       s -> ((StringValueChangedCallback) s.observer).valueChanged(v));
                 });
       } else {
-        LOG.error(
-            "unsupported value tyep [{} hashCode:{}].", subscribable, subscribable.hashCode());
+        LOG.error("unsupported value tyep [{}].", subscribable);
         throw new UnsupportedOperationException("Unsupported Value type[" + subscribable + "].");
       }
       subscribable.subscribe();
+      // subscribable.markInterested();
     }
+    SubscriptionImpl<T> subscription = new SubscriptionImpl<T>(subscribable, observer);
+    subscriptions.add(subscription);
+    LOG.trace(
+        "subscribe(): value[{}]. subscriptions total {}.", subscribable, subscriptions.size());
     return subscription;
   }
 }
