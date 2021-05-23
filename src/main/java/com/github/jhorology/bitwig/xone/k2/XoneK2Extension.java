@@ -11,8 +11,11 @@ import com.github.jhorology.bitwig.xone.k2.layer.LayerSelector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.xml.crypto.dsig.TransformService;
+
 public class XoneK2Extension extends ControllerExtension {
   private static final Logger LOG = LoggerFactory.getLogger(XoneK2Extension.class);
+  private static final int TRANSITION_FRAME_RATE = 20;
   private HardwareSurface surface;
   private Layers<XoneK2Control, XoneK2LedState> layers;
 
@@ -25,6 +28,7 @@ public class XoneK2Extension extends ControllerExtension {
     ControllerHost host = getHost();
     SharedModules.init(host);
     Transition.init();
+    transitionService();
     surface = host.createHardwareSurface();
     BaseMixerLayer test = new BaseMixerLayer(host);
     layers =
@@ -35,6 +39,7 @@ public class XoneK2Extension extends ControllerExtension {
     layers.open(BaseMixerLayer.class);
     LOG.info("XONE:K2 Initialized.");
   }
+
 
   @Override
   public void exit() {
@@ -47,8 +52,12 @@ public class XoneK2Extension extends ControllerExtension {
 
   @Override
   public void flush() {
-    // TODO which is better timer or flush()
-    Transition.update();
+    // Transition.update();
     surface.updateHardware();
+  }
+
+  private void transitionService() {
+    Transition.update();
+    getHost().scheduleTask(this::transitionService, 1000 / TRANSITION_FRAME_RATE);
   }
 }

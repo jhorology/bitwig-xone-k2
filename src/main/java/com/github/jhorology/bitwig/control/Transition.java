@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 public class Transition implements Supplier<Double> {
   public static final Function<Double, Double> DEFAULT = t -> 1.0;
@@ -87,7 +86,14 @@ public class Transition implements Supplier<Double> {
   private final long startTime;
 
   private double value = Double.NaN;
-  private boolean removed;
+  private boolean ended;
+
+  public static Transition blink(int onDuration, int offDuration, Consumer<Double> consumer) {
+    Params params = new Params();
+    params.setDelay(onDuration);
+    params.setDuration(offDuration);
+    return new Transition(params, consumer);
+  }
 
   public static Transition create(Consumer<Double> consumer) {
     return new Transition(new Params(), consumer);
@@ -98,32 +104,27 @@ public class Transition implements Supplier<Double> {
   }
 
   private Transition(Params params, Consumer<Double> consumer) {
+    if (params.duration <= 0) {
+    }
     this.params = params;
     this.consumer = consumer;
     this.startTime = System.currentTimeMillis();
+    transitionList.add(this);
   }
 
-  /**
-   * initialize
-   * this method should be called at ControllerExtension#init()
-   */
+  /** initialize. this method should be called at ControllerExtension#init() */
   public static void init() {
     transitionList = new ArrayList<>();
   }
 
-  /**
-   * update transitions
-   */
+  /** update transitions. */
   public static void update() {
     long currentTime = System.currentTimeMillis();
-    transitionList.remove(
-        transitionList.stream().filter(t -> t._update(currentTime)).collect(Collectors.toList()));
+    transitionList.forEach(t -> t._update(currentTime));
+    transitionList.removeIf(Transition::isEnded);
   }
 
-  /**
-   * finalize.
-   * this method should be called at ControllerExtension#exit()
-   */
+  /** finalize. this method should be called at ControllerExtension#exit() */
   public static void exit() {
     transitionList.clear();
     transitionList = null;
@@ -134,9 +135,13 @@ public class Transition implements Supplier<Double> {
     return value;
   }
 
-  private boolean _update(long currentTime) {
-    if (removed) {
-      return true;
+  private boolean isEnded() {
+    return ended;
+  }
+
+  private void _update(long currentTime) {
+    if (this.isEnded()) {
+      return;
     }
     long cycleDuration = params.delay + params.duration + params.endDelay;
     long elapsedTime = currentTime - startTime;
@@ -152,16 +157,16 @@ public class Transition implements Supplier<Double> {
       value = params.fn.apply((double) (cycleElapsedTime - params.delay) / params.duration);
     } else {
       // in end delay
-      value = this.value;
+      value = params.fn.apply(1.0);
     }
     if (this.value != value) {
       this.consumer.accept(value);
+      this.value = value;
     }
-    this.removed = !params.loop && elapsedTime >= cycleDuration;
-    return this.removed;
+    this.ended = !params.loop && elapsedTime >= cycleDuration;
   }
 
   public void remove() {
-    this.removed = true;
+    this.ended = true;
   }
 }
