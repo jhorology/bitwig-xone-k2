@@ -1,19 +1,33 @@
-package com.github.jhorology.bitwig.control;
+package com.github.jhorology.bitwig.utils;
 
-import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+/**
+ *  Simple transition generator.
+ *  for visual, modulation, etc..any purpose.
+ *
+ *         1.0 |
+ *  startValue |--------------!\  fn(t)
+ *             |                 \----------\
+ *             |                             \
+ *             |                              \_____________
+ *             |
+ *             |            t=0              t=1.0
+ *         0.0 |-------------|----------------|-------------!
+ *               delay           duration         endDelay
+ */
 public class Transition implements Supplier<Double> {
-  public static final Function<Double, Double> DEFAULT = t -> 1.0;
   public static final Function<Double, Double> LINEAR = t -> t;
   public static final Function<Double, Double> BEZIER = t -> t * t * (3.0 - 2.0 * t);
   // TODO need more functions
 
-  // default ON=100ms OFF=100ms
+  /**
+   * A POJO class for parameters of transition.
+   */
   public static class Params {
     private double startValue = 1.0;
     private int delay = 0;
@@ -88,6 +102,7 @@ public class Transition implements Supplier<Double> {
   private double value = Double.NaN;
   private boolean ended;
 
+  // TODO need more static methods for easy use
   public static Transition blink(int onDuration, int offDuration, Consumer<Double> consumer) {
     Params params = new Params();
     params.setDelay(onDuration);
@@ -104,8 +119,6 @@ public class Transition implements Supplier<Double> {
   }
 
   private Transition(Params params, Consumer<Double> consumer) {
-    if (params.duration <= 0) {
-    }
     this.params = params;
     this.consumer = consumer;
     this.startTime = System.currentTimeMillis();
@@ -117,7 +130,10 @@ public class Transition implements Supplier<Double> {
     transitionList = new ArrayList<>();
   }
 
-  /** update transitions. */
+  /**
+   * update transitions.
+   * this method should be called interval.
+   */
   public static void update() {
     long currentTime = System.currentTimeMillis();
     transitionList.forEach(t -> t._update(currentTime));

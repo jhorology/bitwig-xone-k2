@@ -4,14 +4,12 @@ import com.bitwig.extension.controller.ControllerExtension;
 import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.HardwareSurface;
 import com.github.jhorology.bitwig.control.Layers;
-import com.github.jhorology.bitwig.control.Transition;
+import com.github.jhorology.bitwig.utils.Transition;
 import com.github.jhorology.bitwig.xone.k2.layer.BaseMixerLayer;
 import com.github.jhorology.bitwig.xone.k2.layer.ClipLauncherLayer;
 import com.github.jhorology.bitwig.xone.k2.layer.LayerSelector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.xml.crypto.dsig.TransformService;
 
 public class XoneK2Extension extends ControllerExtension {
   private static final Logger LOG = LoggerFactory.getLogger(XoneK2Extension.class);

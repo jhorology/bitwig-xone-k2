@@ -9,7 +9,7 @@ import com.bitwig.extension.controller.api.MidiIn;
 import com.bitwig.extension.controller.api.MidiOut;
 import com.bitwig.extension.controller.api.RelativeHardwareValueMatcher;
 import com.github.jhorology.bitwig.control.Control;
-import com.github.jhorology.bitwig.control.Transition;
+import com.github.jhorology.bitwig.utils.Transition;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -123,7 +123,7 @@ public class XoneK2Control extends Control<XoneK2Control, XoneK2LedState> {
   private final int note;
   private final int cc;
   private final String name;
-  private Transition transition;
+  private Transition ledTransition;
 
   private static XoneK2Control create(int spec, int note, int cc, String name) {
     return new XoneK2Control(spec, note, cc, name);
@@ -228,7 +228,7 @@ public class XoneK2Control extends Control<XoneK2Control, XoneK2LedState> {
     LOG.trace("[{}] led updated to state [{}].", name(), state);
     int noteOffset = this == LAYER || this == SHIFT ? 4 : 36;
     if (state != null && state.isBlinkState()) {
-      this.transition =
+      ledTransition =
           Transition.blink(
               100,
               100,
@@ -241,12 +241,12 @@ public class XoneK2Control extends Control<XoneK2Control, XoneK2LedState> {
               });
       // TODO beat blinking
     } else {
-      if (this.transition != null) {
-        transition.remove();
-        transition = null;
+      if (ledTransition != null) {
+        ledTransition.remove();
+        ledTransition = null;
       }
+      sendColor(state, midiOut);
     }
-    sendColor(state, midiOut);
   }
 
   private void sendColor(XoneK2LedState state, MidiOut midiOut) {

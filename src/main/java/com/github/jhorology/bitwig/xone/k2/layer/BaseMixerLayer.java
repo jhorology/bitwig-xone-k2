@@ -54,6 +54,8 @@ public class BaseMixerLayer extends AbstractLayer {
         O.onPressed(TRANSPORT.recordAction()).led(TRANSPORT.isArrangerRecordEnabled(), RED),
         P.onPressed(TRANSPORT.isArrangerAutomationWriteEnabled())
             .led(TRANSPORT.isArrangerAutomationWriteEnabled(), RED),
+        //
+        // first base-layer only can setup common controls
         LAYER.onReleased(GREEN).onPressed(RED),
         NAV1.onRelValue(CURSOR_TRACK),
         SHIFT.onReleased(GREEN).onPressed(RED));

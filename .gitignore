@@ -6,7 +6,7 @@ build
 
 # Intellij project configuration
 .idea
-.run
+# .run
 
 # visual Studio Code configuration
 .vscode

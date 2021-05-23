@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 
 public abstract class Layer<T extends Control<T, L>, L extends InternalHardwareLightState> {
   private static final Logger LOG = LoggerFactory.getLogger(Layer.class);
-  protected Set<Control<T, L>> controls;
+  protected Set<T> controls;
   protected final ControllerHost host;
   private boolean initializing;
   protected Layers<T, L> layers;
@@ -52,20 +52,20 @@ public abstract class Layer<T extends Control<T, L>, L extends InternalHardwareL
   /** dispose delegation point for inherited class. */
   protected void onDispose() {}
 
-  protected void use(Control<T, L> control) {
+  protected final void use(T control) {
     if (initializing) {
       this.controls.add(control);
     }
   }
 
   @SafeVarargs
-  protected final void use(Control<T, L>... controls) {
+  protected final void use(T... controls) {
     if (initializing) {
       this.controls.addAll(Arrays.asList(controls));
     }
   }
 
-  Set<Control<T, L>> getControls() {
+  Set<T> getControls() {
     return controls;
   }
 
