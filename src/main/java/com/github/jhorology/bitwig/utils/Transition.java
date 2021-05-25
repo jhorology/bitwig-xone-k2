@@ -18,16 +18,30 @@ import java.util.function.Supplier;
  *                 |
  *                 |            t=0.0            t=1.0
  *             0.0 |-------------|----------------|-------------!
- *                    delay(ms)     duration(ms)     endDelay(ms0
+ *                    delay(ms)     duration(ms)     endDelay(ms)
  * </pre>
  */
 public class Transition implements Supplier<Double> {
-  public static final Function<Double, Double> PULSE = t -> t == 1.0 ? 0 : 1.0;
-  public static final Function<Double, Double> LINEAR = t -> t;
-  public static final Function<Double, Double> EASE_IN_BEZIER = t -> t * t * (3.0 - 2.0 * t);
+  private static final Function<Double, Double> PULSE = t -> t == 1.0 ? 0 : 1.0;
+  private static final Function<Double, Double> LINEAR = t -> t;
+  private static final Function<Double, Double> BEZIER_EASE_IN = t -> t * t * (3.0 - 2.0 * t);
   // TODO need more functions
 
-  /** A POJO class for parameters of transition. */
+  /**
+   * A POJO class for parameters of transition.
+   *
+   * <p>defaultL: pulse on=200ms, off=200ms
+   *
+   * <pre>
+   *   delay = 0
+   *   endDelay = 200
+   *   duration  = 200
+   *   loop = true
+   *   triggerable = false
+   *   globalSync = true
+   *   fn = t -> t == 1.0 ? 0 : 1.0;
+   * </pre>
+   */
   public static class Params {
     private int delay = 0;
     private int endDelay = 200;
@@ -141,12 +155,20 @@ public class Transition implements Supplier<Double> {
     transitionList.add(this);
   }
 
-  /** initialize. this method should be called at ControllerExtension#init() */
+  /**
+   * initialize.
+   *
+   * <p>this method should be called at ControllerExtension#init()
+   */
   public static void init() {
     transitionList = new ArrayList<>();
   }
 
-  /** finalize. this method should be called at ControllerExtension#exit() */
+  /**
+   * finalize.
+   *
+   * <p>this method should be called at ControllerExtension#exit()
+   */
   public static void exit() {
     transitionList.clear();
     transitionList = null;
@@ -161,13 +183,16 @@ public class Transition implements Supplier<Double> {
     }
   }
 
-  /** update transitions. this method should be called interval. */
+  /**
+   * update transitions.
+   *
+   * <p>this method should be called interval.
+   */
   public static void update() {
     long currentTime = System.currentTimeMillis();
     transitionList.forEach(t -> t._update(currentTime));
     transitionList.removeIf(t -> t.ended || t.canceled);
   }
-
 
   @Override
   public Double get() {
@@ -224,6 +249,11 @@ public class Transition implements Supplier<Double> {
     }
   }
 
+  /**
+   * Remove the transition from service task.
+   *
+   * <p>if Parametes.isLoop() == true, this method should be called when it becomes unnecessary.
+   */
   public void remove() {
     canceled = true;
   }
