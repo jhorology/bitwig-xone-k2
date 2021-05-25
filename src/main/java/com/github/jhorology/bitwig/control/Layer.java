@@ -2,8 +2,11 @@ package com.github.jhorology.bitwig.control;
 
 import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.InternalHardwareLightState;
+import com.github.jhorology.bitwig.utils.Hook.Subscription;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +14,7 @@ import org.slf4j.LoggerFactory;
 public abstract class Layer<T extends Control<T, L>, L extends InternalHardwareLightState> {
   private static final Logger LOG = LoggerFactory.getLogger(Layer.class);
   protected Set<T> controls;
+  protected List<Subscription> subscriptions;
   protected final ControllerHost host;
   private boolean initializing;
   protected Layers<T, L> layers;
@@ -29,6 +33,7 @@ public abstract class Layer<T extends Control<T, L>, L extends InternalHardwareL
 
   void initialize() {
     LOG.debug("Layer[{}] start initializing.", this.getClass());
+    subscriptions = new ArrayList<>();
     initializing = true;
     controls = new HashSet<>();
     // call setup() within ControllerExtension#init():
@@ -78,5 +83,7 @@ public abstract class Layer<T extends Control<T, L>, L extends InternalHardwareL
     controls.stream()
         .filter(c -> !excludeCommonControls || !c.isCommon())
         .forEach(Control::clearBindings);
+    subscriptions.forEach(Subscription::unsubscribe);
+    subscriptions.clear();
   }
 }

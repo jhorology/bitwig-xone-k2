@@ -27,6 +27,7 @@ public class ClipLauncherLayer extends AbstractLayer {
     for (int col = 0; col < 4; col++) {
       Track track = TRACK_BANK.getItemAt(col);
       for (int row = 0; row < 4; row++) {
+        // TODO recordAction, queued state ...
         ClipLauncherSlot slot = track.clipLauncherSlotBank().getItemAt(row);
         use(
             grid(col, row)

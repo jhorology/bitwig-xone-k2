@@ -7,43 +7,35 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
- *  Simple transition generator.
- *  for visual, modulation, etc..any purpose.
+ * Simple transition generator. for visual, modulation, etc..any purpose.
  *
- *         1.0 |
- *  startValue |--------------!\  fn(t)
- *             |                 \----------\
- *             |                             \
- *             |                              \_____________
- *             |
- *             |            t=0              t=1.0
- *         0.0 |-------------|----------------|-------------!
- *               delay           duration         endDelay
+ * <pre>
+ *             1.0 |
+ * start = fn(0.0) |________________   fn(t)
+ *                 |                \___________
+ *                 |                            \
+ *                 |                             \_____________ end = fn(1.0)
+ *                 |
+ *                 |            t=0.0            t=1.0
+ *             0.0 |-------------|----------------|-------------!
+ *                    delay(ms)     duration(ms)     endDelay(ms0
+ * </pre>
  */
 public class Transition implements Supplier<Double> {
+  public static final Function<Double, Double> PULSE = t -> t == 1.0 ? 0 : 1.0;
   public static final Function<Double, Double> LINEAR = t -> t;
-  public static final Function<Double, Double> BEZIER = t -> t * t * (3.0 - 2.0 * t);
+  public static final Function<Double, Double> EASE_IN_BEZIER = t -> t * t * (3.0 - 2.0 * t);
   // TODO need more functions
 
-  /**
-   * A POJO class for parameters of transition.
-   */
+  /** A POJO class for parameters of transition. */
   public static class Params {
-    private double startValue = 1.0;
     private int delay = 0;
-    private int endDelay = 100;
-    private int duration = 100;
+    private int endDelay = 200;
+    private int duration = 200;
     private boolean loop = true;
+    private boolean triggerable = false;
     private boolean globalSync = true;
-    private Function<Double, Double> fn = t -> 0.0;
-
-    public double getStartValue() {
-      return startValue;
-    }
-
-    public void setStartValue(double startValue) {
-      this.startValue = startValue;
-    }
+    private Function<Double, Double> fn = PULSE;
 
     public int getDelay() {
       return delay;
@@ -77,6 +69,14 @@ public class Transition implements Supplier<Double> {
       this.loop = loop;
     }
 
+    public boolean isTriggerable() {
+      return triggerable;
+    }
+
+    public void setTriggerable(boolean triggerable) {
+      this.triggerable = triggerable;
+    }
+
     public boolean isGlobalSync() {
       return globalSync;
     }
@@ -97,16 +97,29 @@ public class Transition implements Supplier<Double> {
   private static List<Transition> transitionList;
   private final Params params;
   private final Consumer<Double> consumer;
-  private final long startTime;
-
+  private long startTime;
+  private final double startValue;
+  private final double endValue;
   private double value = Double.NaN;
+  private long lastCycleElapsedTime;
+  private boolean paused;
   private boolean ended;
+  private boolean canceled;
 
   // TODO need more static methods for easy use
   public static Transition blink(int onDuration, int offDuration, Consumer<Double> consumer) {
     Params params = new Params();
-    params.setDelay(onDuration);
-    params.setDuration(offDuration);
+    params.setDuration(onDuration);
+    params.setEndDelay(offDuration);
+    return new Transition(params, consumer);
+  }
+
+  public static Transition triggeredPulse(int pulseDuration, Consumer<Double> consumer) {
+    Params params = new Params();
+    params.setTriggerable(true);
+    params.setDuration(pulseDuration);
+    params.setEndDelay(0);
+    params.setGlobalSync(false);
     return new Transition(params, consumer);
   }
 
@@ -122,6 +135,9 @@ public class Transition implements Supplier<Double> {
     this.params = params;
     this.consumer = consumer;
     this.startTime = System.currentTimeMillis();
+    this.startValue = params.fn.apply(0.0);
+    this.endValue = params.fn.apply(1.0);
+    this.paused = params.triggerable;
     transitionList.add(this);
   }
 
@@ -130,59 +146,93 @@ public class Transition implements Supplier<Double> {
     transitionList = new ArrayList<>();
   }
 
-  /**
-   * update transitions.
-   * this method should be called interval.
-   */
-  public static void update() {
-    long currentTime = System.currentTimeMillis();
-    transitionList.forEach(t -> t._update(currentTime));
-    transitionList.removeIf(Transition::isEnded);
-  }
-
   /** finalize. this method should be called at ControllerExtension#exit() */
   public static void exit() {
     transitionList.clear();
     transitionList = null;
   }
 
+  public void trigger() {
+    if (params.triggerable) {
+      paused = false;
+      value = Double.NaN;
+      startTime = System.currentTimeMillis();
+      _update(startTime);
+    }
+  }
+
+  /** update transitions. this method should be called interval. */
+  public static void update() {
+    long currentTime = System.currentTimeMillis();
+    transitionList.forEach(t -> t._update(currentTime));
+    transitionList.removeIf(t -> t.ended || t.canceled);
+  }
+
+
   @Override
   public Double get() {
     return value;
   }
 
-  private boolean isEnded() {
-    return ended;
-  }
-
   private void _update(long currentTime) {
-    if (this.isEnded()) {
+    if (canceled || paused) {
       return;
     }
     long cycleDuration = params.delay + params.duration + params.endDelay;
     long elapsedTime = currentTime - startTime;
     long cycleElapsedTime =
         params.globalSync ? (currentTime % cycleDuration) : (elapsedTime % cycleDuration);
+    boolean cycleUp = cycleElapsedTime < lastCycleElapsedTime;
+    lastCycleElapsedTime = cycleElapsedTime;
+    if (cycleUp) {
+      // fn(1.0)
+      notifyValue(endValue);
+      if (!params.loop) {
+        ended = true;
+        return;
+      }
+      if (params.triggerable) {
+        paused = true;
+        return;
+      }
+    }
+
+    // start
+    if (cycleUp || Double.isNaN(this.value)) {
+      // fn(0.0)
+      notifyValue(startValue);
+    }
 
     double value;
-    if (cycleElapsedTime < params.delay || Double.isNaN(this.value)) {
+    if (cycleElapsedTime < params.delay) {
       // in delay
-      value = params.startValue;
+      value = startValue;
     } else if (cycleElapsedTime <= (params.delay + params.duration)) {
       // in transition
       value = params.fn.apply((double) (cycleElapsedTime - params.delay) / params.duration);
     } else {
       // in end delay
-      value = params.fn.apply(1.0);
+      value = endValue;
     }
+    notifyValue(value);
+  }
+
+  private void notifyValue(double value) {
     if (this.value != value) {
       this.consumer.accept(value);
       this.value = value;
     }
-    this.ended = !params.loop && elapsedTime >= cycleDuration;
   }
 
   public void remove() {
-    this.ended = true;
+    canceled = true;
+  }
+
+  public boolean isEnded() {
+    return paused;
+  }
+
+  public boolean isPaused() {
+    return paused;
   }
 }

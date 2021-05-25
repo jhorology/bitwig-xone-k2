@@ -2,6 +2,7 @@ package com.github.jhorology.bitwig.xone.k2;
 
 import static com.github.jhorology.bitwig.xone.k2.XoneK2LedState.*;
 
+import com.bitwig.extension.api.Color;
 import com.bitwig.extension.controller.api.AbsoluteHardwareValueMatcher;
 import com.bitwig.extension.controller.api.HardwareActionMatcher;
 import com.bitwig.extension.controller.api.HardwareSurface;
@@ -9,6 +10,7 @@ import com.bitwig.extension.controller.api.MidiIn;
 import com.bitwig.extension.controller.api.MidiOut;
 import com.bitwig.extension.controller.api.RelativeHardwareValueMatcher;
 import com.github.jhorology.bitwig.control.Control;
+import com.github.jhorology.bitwig.utils.Hook.Subscription;
 import com.github.jhorology.bitwig.utils.Transition;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
@@ -124,6 +126,7 @@ public class XoneK2Control extends Control<XoneK2Control, XoneK2LedState> {
   private final int cc;
   private final String name;
   private Transition ledTransition;
+  private Subscription ledBeatSubscription;
 
   private static XoneK2Control create(int spec, int note, int cc, String name) {
     return new XoneK2Control(spec, note, cc, name);
@@ -179,6 +182,15 @@ public class XoneK2Control extends Control<XoneK2Control, XoneK2LedState> {
     return GRID_BUTTONS[row][col];
   }
 
+  /**
+   * Returns a stream of all controls.
+   *
+   * @return stream of all controls
+   */
+  public static Stream<XoneK2Control> stream() {
+    return Stream.of(ALL);
+  }
+
   /** {@inheritDoc} */
   @Override
   protected String name() {
@@ -224,38 +236,45 @@ public class XoneK2Control extends Control<XoneK2Control, XoneK2LedState> {
 
   /** {@inheritDoc} */
   @Override
-  protected void sendLedState(XoneK2LedState state, MidiOut midiOut) {
+  protected void sendLedState(XoneK2LedState state) {
     LOG.trace("[{}] led updated to state [{}].", name(), state);
     int noteOffset = this == LAYER || this == SHIFT ? 4 : 36;
-    if (state != null && state.isBlinkState()) {
-      ledTransition =
-          Transition.blink(
-              100,
-              100,
-              v -> {
-                if (v == 1.0) {
-                  sendColor(state.getBlinkOnState(), midiOut);
-                } else {
-                  sendColor(OFF, midiOut);
-                }
-              });
-      // TODO beat blinking
+    if (state != null && state.getVisualState().isBlinking()) {
+      if (state == RED_BEAT || state == YELLOW_BEAT || state == GREEN_BEAT) {
+        ledTransition = Transition.triggeredPulse(100, v -> {});
+      } else {
+        ledTransition =
+            Transition.blink(
+                100,
+                100,
+                v -> {
+                  if (v == 1.0) {
+                    sendColor(state.getVisualState().getColor());
+                  } else {
+                    sendColor(state.getVisualState().getBlinkOffColor());
+                  }
+                });
+      }
     } else {
       if (ledTransition != null) {
         ledTransition.remove();
         ledTransition = null;
       }
-      sendColor(state, midiOut);
+      if (ledBeatSubscription != null) {
+        ledBeatSubscription.unsubscribe();
+        ledBeatSubscription = null;
+      }
+      sendColor(state != null ? state.getVisualState().getColor() : null);
     }
   }
 
-  private void sendColor(XoneK2LedState state, MidiOut midiOut) {
+  private void sendColor(Color color) {
     int noteOffset = this == LAYER || this == SHIFT ? 4 : 36;
-    if (state == RED) {
+    if (RED_COLOR.equals(color)) {
       midiOut.sendMidi(0x90 + MIDI_CH, note, 0x7f);
-    } else if (state == YELLOW) {
+    } else if (YELLOW_COLOR.equals(color)) {
       midiOut.sendMidi(0x90 + MIDI_CH, note + noteOffset, 0x7f);
-    } else if (state == GREEN) {
+    } else if (GREEN_COLOR.equals(color)) {
       midiOut.sendMidi(0x90 + MIDI_CH, note + noteOffset * 2, 0x7f);
     } else {
       midiOut.sendMidi(0x90 + MIDI_CH, note, 0);

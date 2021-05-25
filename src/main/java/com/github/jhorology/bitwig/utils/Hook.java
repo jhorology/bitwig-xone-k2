@@ -1,10 +1,12 @@
 package com.github.jhorology.bitwig.utils;
 
+import com.bitwig.extension.api.Color;
 import com.bitwig.extension.callback.*;
 import com.bitwig.extension.controller.api.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,34 +15,29 @@ public class Hook {
   private static final Logger LOG = LoggerFactory.getLogger(Hook.class);
 
   // TODO  Can Value be used as hash key?
-  private static final HashMap<Value<? extends ValueChangedCallback>, List<SubscriptionImpl<?>>>
-      hooks = new HashMap<>();
+  private static final HashMap<Value<?>, List<SubscriptionImpl>> hooks = new HashMap<>();
 
   /** An interface of unsubscribable subscription of Value object. */
   public static interface Subscription {
     void unsubscribe();
   }
 
-  /**
-   * An interface o
-   *
-   * @param <T>
-   */
-  private static class SubscriptionImpl<T extends ValueChangedCallback> implements Subscription {
-    private final Value<T> subscribable;
-    private final T observer;
+  /** An interface o */
+  private static class SubscriptionImpl implements Subscription {
+    private final Value<?> value;
+    private final Consumer<?> consumer;
 
-    private SubscriptionImpl(Value<T> subscribable, T observer) {
-      this.subscribable = subscribable;
-      this.observer = observer;
+    private SubscriptionImpl(Value<?> value, Consumer<?> consumer) {
+      this.value = value;
+      this.consumer = consumer;
     }
 
     @Override
     public void unsubscribe() {
-      List<SubscriptionImpl<?>> subscriptions = hooks.get(subscribable);
+      List<SubscriptionImpl> subscriptions = hooks.get(value);
 
       if (subscriptions == null) {
-        LOG.error("unsubscribe(): value[{}] not found!!", subscribable);
+        LOG.error("unsubscribe(): value[{}] not found!!", value);
         return;
       }
 
@@ -48,103 +45,141 @@ public class Hook {
       if (!removed) {
         LOG.error(
             "unsubscribe(): subscription not found!! value:[{}]. subscriptions total {}.",
-            subscribable,
+            value,
             subscriptions.size());
         return;
       }
       LOG.trace(
           "unsubscribe(): subscription was removed, value[{}] subscriptions total {}",
-          subscribable,
+          value,
           subscriptions.size());
 
       if (subscriptions.isEmpty()) {
-        hooks.remove(subscribable);
-        subscribable.unsubscribe();
-        LOG.trace(
-            "unsubscribe(): value[{}] was removed. subscribing values total {}.",
-            subscribable,
-            hooks.keySet().size());
+        //              hooks.remove(value);
+        value.unsubscribe();
+        //              LOG.trace(
+        //                  "unsubscribe(): value[{}] was removed. subscribing values total {}.",
+        //                  value,
+        //                  hooks.keySet().size());
       }
     }
   }
 
-  /**
-   * Subscribe the value object.
-   *
-   * @param subscribable A subscribable value object of Bitwig API.
-   * @param observer A instance of extended type of ValuchangedcallBack
-   * @param <T> extended type of ValuChangedCallback
-   * @return a instance of Subscription.
-   */
-  public static <T extends ValueChangedCallback> Subscription subscribe(
-      Value<T> subscribable, T observer) {
-    List<SubscriptionImpl<?>> subscriptions =
-        hooks.computeIfAbsent(subscribable, k -> new ArrayList<>());
-    if (subscriptions.size() == 0) {
-      if (observer instanceof BooleanValueChangedCallback) {
-        ((BooleanValue) subscribable)
-            .addValueObserver(
-                v -> {
-                  LOG.trace(
-                      "[{}] changed to {}. total subscriptions {}.",
-                      subscribable,
-                      v,
-                      subscriptions.size());
-                  subscriptions.forEach(
-                      s -> ((BooleanValueChangedCallback) s.observer).valueChanged(v));
-                });
-      } else if (observer instanceof IntegerValueChangedCallback) {
-        ((IntegerValue) subscribable)
-            .addValueObserver(
-                v -> {
-                  LOG.trace(
-                      "[{}] changed to {}. total subscriptions {}.",
-                      subscribable,
-                      v,
-                      subscriptions.size());
-                  subscriptions.forEach(
-                      s -> ((IntegerValueChangedCallback) s.observer).valueChanged(v));
-                });
-      } else if (observer instanceof DoubleValueChangedCallback) {
-        ((DoubleValue) subscribable)
-            .addValueObserver(
-                v -> {
-                  LOG.trace(
-                      "[{}] changed to {}. total subscriptions {}.",
-                      subscribable,
-                      v,
-                      subscriptions.size());
-                  subscriptions.forEach(
-                      s -> ((DoubleValueChangedCallback) s.observer).valueChanged(v));
-                });
-      } else if (observer instanceof StringValueChangedCallback) {
-        LOG.trace(
-            "subscribe StringValue:[{} hashCode:{}], total {} subscriptions.",
-            subscribable,
-            subscribable.hashCode(),
-            subscriptions.size());
-        ((StringValue) subscribable)
-            .addValueObserver(
-                v -> {
-                  LOG.trace(
-                      "[{}] changed to {}. total subscriptions {}.",
-                      subscribable,
-                      v,
-                      subscriptions.size());
-                  subscriptions.forEach(
-                      s -> ((StringValueChangedCallback) s.observer).valueChanged(v));
-                });
-      } else {
-        LOG.error("unsupported value tyep [{}].", subscribable);
-        throw new UnsupportedOperationException("Unsupported Value type[" + subscribable + "].");
-      }
-      subscribable.subscribe();
-      // subscribable.markInterested();
-    }
-    SubscriptionImpl<T> subscription = new SubscriptionImpl<T>(subscribable, observer);
+  @SuppressWarnings("unchecked")
+  public static Subscription subscribeBoolean(
+      Value<BooleanValueChangedCallback> value, Consumer<Boolean> consumer) {
+    List<SubscriptionImpl> subscriptions =
+        hooks.computeIfAbsent(
+            value,
+            k -> {
+              List<SubscriptionImpl> list = new ArrayList<>();
+              value.addValueObserver(
+                  v -> list.forEach(s -> ((Consumer<Boolean>) s.consumer).accept(v)));
+              value.subscribe();
+              return list;
+            });
+    SubscriptionImpl subscription = new SubscriptionImpl(value, consumer);
     subscriptions.add(subscription);
-    LOG.trace(
-        "subscribe(): value[{}]. subscriptions total {}.", subscribable, subscriptions.size());
+    LOG.trace("subscribe(): value[{}]. subscriptions total {}.", value, subscriptions.size());
+    return subscription;
+  }
+
+  @SuppressWarnings("unchecked")
+  public static Subscription subscribeInteger(
+      Value<IntegerValueChangedCallback> value, Consumer<Integer> consumer) {
+    List<SubscriptionImpl> subscriptions =
+        hooks.computeIfAbsent(
+            value,
+            k -> {
+              List<SubscriptionImpl> list = new ArrayList<>();
+              value.addValueObserver(
+                  (int v) -> list.forEach(s -> ((Consumer<Integer>) s.consumer).accept(v)));
+              value.subscribe();
+              return list;
+            });
+    SubscriptionImpl subscription = new SubscriptionImpl(value, consumer);
+    subscriptions.add(subscription);
+    LOG.trace("subscribe(): value[{}]. subscriptions total {}.", value, subscriptions.size());
+    return subscription;
+  }
+
+  @SuppressWarnings("unchecked")
+  public static Subscription subscribeDouble(
+      Value<DoubleValueChangedCallback> value, Consumer<Double> consumer) {
+    List<SubscriptionImpl> subscriptions =
+        hooks.computeIfAbsent(
+            value,
+            k -> {
+              List<SubscriptionImpl> list = new ArrayList<>();
+              value.addValueObserver(
+                  (double v) -> list.forEach(s -> ((Consumer<Double>) s.consumer).accept(v)));
+              value.subscribe();
+              return list;
+            });
+    SubscriptionImpl subscription = new SubscriptionImpl(value, consumer);
+    subscriptions.add(subscription);
+    LOG.trace("subscribe(): value[{}]. subscriptions total {}.", value, subscriptions.size());
+    return subscription;
+  }
+
+  @SuppressWarnings("unchecked")
+  public static Subscription subscribeString(
+      Value<ObjectValueChangedCallback<String>> value, Consumer<String> consumer) {
+    List<SubscriptionImpl> subscriptions =
+        hooks.computeIfAbsent(
+            value,
+            k -> {
+              List<SubscriptionImpl> list = new ArrayList<>();
+              value.addValueObserver(
+                  (String v) -> list.forEach(s -> ((Consumer<String>) s.consumer).accept(v)));
+              value.subscribe();
+              return list;
+            });
+    SubscriptionImpl subscription = new SubscriptionImpl(value, consumer);
+    subscriptions.add(subscription);
+    LOG.trace("subscribe(): value[{}]. subscriptions total {}.", value, subscriptions.size());
+    return subscription;
+  }
+
+  @SuppressWarnings("unchecked")
+  public static Subscription subscribeColor(
+      Value<ColorValueChangedCallback> value, Consumer<Color> consumer) {
+    List<SubscriptionImpl> subscriptions =
+        hooks.computeIfAbsent(
+            value,
+            k -> {
+              List<SubscriptionImpl> list = new ArrayList<>();
+              value.addValueObserver(
+                  (float red, float green, float blue) -> {
+                    list.forEach(
+                        s ->
+                            ((Consumer<Color>) s.consumer).accept(Color.fromRGB(red, green, blue)));
+                  });
+              value.subscribe();
+              return list;
+            });
+    SubscriptionImpl subscription = new SubscriptionImpl(value, consumer);
+    subscriptions.add(subscription);
+    LOG.trace("subscribe(): value[{}]. subscriptions total {}.", value, subscriptions.size());
+    return subscription;
+  }
+
+  @SuppressWarnings("unchecked")
+  public static Subscription subscribeStringArray(
+      Value<ObjectValueChangedCallback<String[]>> value, Consumer<String[]> consumer) {
+    List<SubscriptionImpl> subscriptions =
+        hooks.computeIfAbsent(
+            value,
+            k -> {
+              List<SubscriptionImpl> list = new ArrayList<>();
+              value.addValueObserver(
+                  (String[] v) -> list.forEach(s -> ((Consumer<String[]>) s.consumer).accept(v)));
+              value.subscribe();
+              return list;
+            });
+    SubscriptionImpl subscription = new SubscriptionImpl(value, consumer);
+    subscriptions.add(subscription);
+    LOG.trace("subscribe(): value[{}]. subscriptions total {}.", value, subscriptions.size());
     return subscription;
   }
 }

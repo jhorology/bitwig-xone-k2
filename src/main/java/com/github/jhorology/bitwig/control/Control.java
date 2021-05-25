@@ -52,7 +52,7 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
   private double absValue;
   private boolean pressed;
 
-  private MidiOut midiOut;
+  protected MidiOut midiOut;
 
   /** Control has behavior of button. */
   protected static final int BUTTON = 0x01;
@@ -169,16 +169,18 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
   protected abstract RelativeHardwareValueMatcher createRelValueMatcher(MidiIn midiIn);
 
   /** send MIDI messages to control LED. */
-  protected abstract void sendLedState(L state, MidiOut midiOut);
+  protected abstract void sendLedState(L state);
 
   /**
-   * initialize. this method should be called in inherited class at extension's start of lifecycle.
+   * initialize.
+   *
+   * <p>this method should be called in inherited class at extension's start of lifecycle.
    *
    * @param surface
    * @param midiIn A MIDI input port
    * @param midiOut A MIDI output port, nullable when control doesn't have LED.
    */
-  protected void initialize(HardwareSurface surface, MidiIn midiIn, MidiOut midiOut) {
+  protected final void initialize(HardwareSurface surface, MidiIn midiIn, MidiOut midiOut) {
     this.midiOut = midiOut;
     if (isButton()) {
       LOG.trace("[{}] control is button.", name());
@@ -196,13 +198,25 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
       LOG.trace("[{}] control is LED.", name());
       this.led = createLed(surface);
     }
+    onInitialize();
   }
 
-  /** finalize. this method should be called in inherited class at extension's end of lifecycle. */
+  /** initialize delegation point for inherit class. */
+  protected void onInitialize() {}
+
+  /**
+   * finalize.
+   *
+   * <p>this method should be called in inherited class at extension's end of lifecycle.
+   */
   protected void dispose() {
+    onDispose();
     clearBindings();
     clearInternalSubscriptions();
   }
+
+  /** finalize delegation point for inherit class. */
+  protected void onDispose() {}
 
   /**
    * Set a LED state for button pressed event.
@@ -494,7 +508,8 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
     if (!isLED()) {
       throw new UnsupportedOperationException("[" + name() + "] Control doesn't have LED.");
     }
-    subscriptions.add(Hook.subscribe(value, v -> led.state().setValue(v ? onState : offState)));
+    subscriptions.add(
+        Hook.subscribeBoolean(value, v -> led.state().setValue(v ? onState : offState)));
     return (T) this;
   }
 
@@ -592,7 +607,7 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
     btn.pressedAction().setActionMatcher(createPressedActionMatcher(midiIn));
     btn.releasedAction().setActionMatcher(createReleasedActionMatcher(midiIn));
     internalSubscriptions.add(
-        Hook.subscribe(
+        Hook.subscribeBoolean(
             btn.isPressed(),
             pressed -> {
               this.pressed = pressed;
@@ -608,7 +623,7 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
     }
     knob.setAdjustValueMatcher(createAbsValueMatcher(midiIn));
     internalSubscriptions.add(
-        Hook.subscribe(
+        Hook.subscribeDouble(
             knob.value(),
             value -> {
               absValue = value;
@@ -630,7 +645,7 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
   @SuppressWarnings("unchecked")
   private MultiStateHardwareLight createLed(HardwareSurface surface) {
     MultiStateHardwareLight led = surface.createMultiStateHardwareLight(name() + LED_SUFFIX);
-    led.state().onUpdateHardware(state -> sendLedState((L) state, midiOut));
+    led.state().onUpdateHardware(state -> sendLedState((L) state));
     // TODO blinking
     return led;
   }

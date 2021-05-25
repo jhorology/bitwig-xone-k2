@@ -38,7 +38,6 @@ public class XoneK2Extension extends ControllerExtension {
     LOG.info("XONE:K2 Initialized.");
   }
 
-
   @Override
   public void exit() {
     layers.exit();
