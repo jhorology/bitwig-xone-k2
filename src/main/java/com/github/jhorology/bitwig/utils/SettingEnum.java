@@ -1,4 +1,4 @@
-package com.github.jhorology.bitwig.control;
+package com.github.jhorology.bitwig.utils;
 
 import com.bitwig.extension.controller.api.EnumDefinition;
 import com.bitwig.extension.controller.api.EnumValueDefinition;
