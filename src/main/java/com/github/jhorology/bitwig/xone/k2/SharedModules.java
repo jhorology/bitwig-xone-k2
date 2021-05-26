@@ -4,10 +4,13 @@ import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.CursorTrack;
 import com.bitwig.extension.controller.api.DocumentState;
 import com.bitwig.extension.controller.api.Parameter;
-import com.bitwig.extension.controller.api.SettableRangedValue;
+import com.bitwig.extension.controller.api.SettableEnumValue;
 import com.bitwig.extension.controller.api.TrackBank;
 import com.bitwig.extension.controller.api.Transport;
 import com.bitwig.extension.controller.api.UserControlBank;
+import com.github.jhorology.bitwig.xone.k2.Modes.Nav1Mode;
+import com.github.jhorology.bitwig.xone.k2.Modes.Nav2Mode;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -17,8 +20,8 @@ public class SharedModules {
   public static TrackBank TRACK_BANK;
   public static Map<XoneK2Control, Parameter> USER_CONTROL_MAP;
   public static DocumentState DOCUMENT_STATE;
-  public static SettableRangedValue NAV1_MODE;
-  public static SettableRangedValue NAV2_MODE;
+  public static SettableEnumValue NAV1_MODE;
+  public static SettableEnumValue NAV2_MODE;
 
   static void init(ControllerHost host) {
     TRANSPORT = host.createTransport();
@@ -27,8 +30,8 @@ public class SharedModules {
     TRACK_BANK.followCursorTrack(CURSOR_TRACK);
     TRACK_BANK.sceneBank().setIndication(true);
     DOCUMENT_STATE = host.getDocumentState();
-    NAV1_MODE = DOCUMENT_STATE.getNumberSetting("NAV1 Mode", "XONE:K2", 0, 5, 1, "", 0);
-    NAV2_MODE = DOCUMENT_STATE.getNumberSetting("NAV2 Mode", "XONE:K2", 0, 5, 1, "", 0);
+    NAV1_MODE = DOCUMENT_STATE.getEnumSetting("Nav1", "Navigation Knob mode", Nav1Mode.TEST1);
+    NAV2_MODE = DOCUMENT_STATE.getEnumSetting("Nav2", "Navigation Knob mode", Nav2Mode.TEST1);
     // 4 x 4 knobs + 4 faders + 4 x 4 grid buttons
     int numUserControls = 4 * 4 + 4 + 4 * 4;
     UserControlBank controls = host.createUserControls(numUserControls);
@@ -66,5 +69,7 @@ public class SharedModules {
     DOCUMENT_STATE = null;
     USER_CONTROL_MAP.clear();
     USER_CONTROL_MAP = null;
+    NAV1_MODE = null;
+    NAV2_MODE = null;
   }
 }

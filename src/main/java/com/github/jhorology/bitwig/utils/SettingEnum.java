@@ -8,7 +8,7 @@ import com.bitwig.extension.controller.api.EnumValueDefinition;
  *
  * @param <E> enum type.
  */
-public interface SettingEnum<E extends Enum<E> & EnumValueDefinition> {
+public interface SettingEnum<E extends Enum<E> & EnumValueDefinition> extends EnumValueDefinition {
   /**
    * Returns a concrete enum type.
    *
