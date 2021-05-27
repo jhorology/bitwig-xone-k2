@@ -1,6 +1,6 @@
 package com.github.jhorology.bitwig.xone.k2.layer;
 
-import static com.github.jhorology.bitwig.xone.k2.SharedModules.*;
+import static com.github.jhorology.bitwig.xone.k2.Modules.*;
 import static com.github.jhorology.bitwig.xone.k2.XoneK2Control.*;
 import static com.github.jhorology.bitwig.xone.k2.XoneK2LedState.*;
 

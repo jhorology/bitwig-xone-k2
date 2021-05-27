@@ -1,6 +1,6 @@
 package com.github.jhorology.bitwig.xone.k2.layer;
 
-import static com.github.jhorology.bitwig.xone.k2.SharedModules.*;
+import static com.github.jhorology.bitwig.xone.k2.Modules.*;
 import static com.github.jhorology.bitwig.xone.k2.XoneK2Control.*;
 import static com.github.jhorology.bitwig.xone.k2.XoneK2LedState.*;
 
@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 public class BaseMixerLayer extends AbstractLayer {
   private static final Logger LOG = LoggerFactory.getLogger(BaseMixerLayer.class);
 
+  /** @param host */
   public BaseMixerLayer(ControllerHost host) {
     super(host);
   }
@@ -43,7 +44,10 @@ public class BaseMixerLayer extends AbstractLayer {
           knob(ch, 2).onAbsValue(send1).onPressed(send1::reset).onReleased(GREEN).onPressed(RED),
           knob(ch, 3).onAbsValue(send2).onPressed(send2::reset).onReleased(GREEN).onPressed(RED),
           fader(ch).onAbsValue(volume),
-          grid(ch, 0).onPressed(track.arm()).led(track.arm(), RED),
+          grid(ch, 0)
+              .onPressed(SHIFT::isReleased, track.arm())
+              .onPressed(SHIFT::isPressed, volume::reset)
+              .led(track.arm(), RED),
           grid(ch, 1).onPressed(track.solo()).led(track.solo(), YELLOW),
           grid(ch, 2).onPressed(track.mute()).led(track.mute(), YELLOW));
     }

@@ -4,6 +4,7 @@ import com.bitwig.extension.controller.ControllerExtension;
 import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.HardwareSurface;
 import com.github.jhorology.bitwig.control.Layers;
+import com.github.jhorology.bitwig.utils.Hook;
 import com.github.jhorology.bitwig.utils.Transition;
 import com.github.jhorology.bitwig.xone.k2.layer.BaseMixerLayer;
 import com.github.jhorology.bitwig.xone.k2.layer.ClipLauncherLayer;
@@ -24,7 +25,8 @@ public class XoneK2Extension extends ControllerExtension {
   @Override
   public void init() {
     ControllerHost host = getHost();
-    SharedModules.init(host);
+    Hook.init();
+    Modules.init(host);
     Transition.init();
     transitionService();
     surface = host.createHardwareSurface();
@@ -43,7 +45,8 @@ public class XoneK2Extension extends ControllerExtension {
     layers.exit();
     XoneK2Control.exit();
     Transition.exit();
-    SharedModules.exit();
+    Modules.exit();
+    Hook.exit();
     LOG.info("XONE:K2 Exited.");
   }
 

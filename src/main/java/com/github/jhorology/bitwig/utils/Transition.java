@@ -128,7 +128,7 @@ public class Transition implements Supplier<Double> {
     return new Transition(params, consumer);
   }
 
-  public static Transition triggeredPulse(int pulseDuration, Consumer<Double> consumer) {
+  public static Transition triggerablePulse(int pulseDuration, Consumer<Double> consumer) {
     Params params = new Params();
     params.setTriggerable(true);
     params.setDuration(pulseDuration);

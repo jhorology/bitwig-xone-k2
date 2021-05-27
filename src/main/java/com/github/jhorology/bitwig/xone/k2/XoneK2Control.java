@@ -1,5 +1,6 @@
 package com.github.jhorology.bitwig.xone.k2;
 
+import static com.github.jhorology.bitwig.xone.k2.Modules.TRANSPORT;
 import static com.github.jhorology.bitwig.xone.k2.XoneK2LedState.*;
 
 import com.bitwig.extension.api.Color;
@@ -10,6 +11,7 @@ import com.bitwig.extension.controller.api.MidiIn;
 import com.bitwig.extension.controller.api.MidiOut;
 import com.bitwig.extension.controller.api.RelativeHardwareValueMatcher;
 import com.github.jhorology.bitwig.control.Control;
+import com.github.jhorology.bitwig.utils.Hook;
 import com.github.jhorology.bitwig.utils.Hook.Subscription;
 import com.github.jhorology.bitwig.utils.Transition;
 import java.util.stream.Stream;
@@ -126,7 +128,7 @@ public class XoneK2Control extends Control<XoneK2Control, XoneK2LedState> {
   private final int cc;
   private final String name;
   private Transition ledTransition;
-  private Subscription ledBeatSubscription;
+  private Subscription<Double> ledBeatSubscription;
 
   private static XoneK2Control create(int spec, int note, int cc, String name) {
     return new XoneK2Control(spec, note, cc, name);
@@ -142,6 +144,7 @@ public class XoneK2Control extends Control<XoneK2Control, XoneK2LedState> {
 
   /** initialize. */
   public static void init(HardwareSurface surface, MidiIn midiIn, MidiOut midiOut) {
+    Hook.use(TRANSPORT.playPosition());
     Stream.of(ALL).forEach(c -> c.initialize(surface, midiIn, midiOut));
   }
 
@@ -189,6 +192,26 @@ public class XoneK2Control extends Control<XoneK2Control, XoneK2LedState> {
    */
   public static Stream<XoneK2Control> stream() {
     return Stream.of(ALL);
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  protected void onInitialize() {}
+
+  /** {@inheritDoc} */
+  @Override
+  protected void onDispose() {
+    if (isLED()) {
+      if (ledTransition != null) {
+        ledTransition.remove();
+        ledTransition = null;
+      }
+      if (ledBeatSubscription != null) {
+        ledBeatSubscription.unsubscribe();
+        ledBeatSubscription = null;
+      }
+      this.led.state().setValue(OFF);
+    }
   }
 
   /** {@inheritDoc} */
@@ -241,19 +264,16 @@ public class XoneK2Control extends Control<XoneK2Control, XoneK2LedState> {
     int noteOffset = this == LAYER || this == SHIFT ? 4 : 36;
     if (state != null && state.getVisualState().isBlinking()) {
       if (state == RED_BEAT || state == YELLOW_BEAT || state == GREEN_BEAT) {
-        ledTransition = Transition.triggeredPulse(100, v -> {});
-      } else {
-        ledTransition =
-            Transition.blink(
-                100,
-                100,
+        sendColor(state.getVisualState().getColor());
+        ledTransition = Transition.triggerablePulse(100, v -> blinkLed(state, v));
+        ledBeatSubscription =
+            Hook.subscribe(
+                TRANSPORT.playPosition(),
                 v -> {
-                  if (v == 1.0) {
-                    sendColor(state.getVisualState().getColor());
-                  } else {
-                    sendColor(state.getVisualState().getBlinkOffColor());
-                  }
+                  LOG.info("BEAT value={}", v);
                 });
+      } else {
+        ledTransition = Transition.blink(100, 100, v -> blinkLed(state, v));
       }
     } else {
       if (ledTransition != null) {
@@ -265,6 +285,14 @@ public class XoneK2Control extends Control<XoneK2Control, XoneK2LedState> {
         ledBeatSubscription = null;
       }
       sendColor(state != null ? state.getVisualState().getColor() : null);
+    }
+  }
+
+  private void blinkLed(XoneK2LedState state, double value) {
+    if (value == 1.0) {
+      sendColor(state.getVisualState().getColor());
+    } else {
+      sendColor(state.getVisualState().getBlinkOffColor());
     }
   }
 

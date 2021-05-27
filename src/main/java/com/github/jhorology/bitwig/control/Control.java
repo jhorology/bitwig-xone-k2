@@ -4,9 +4,7 @@ import com.bitwig.extension.controller.api.AbsoluteHardwarControlBindable;
 import com.bitwig.extension.controller.api.AbsoluteHardwareKnob;
 import com.bitwig.extension.controller.api.AbsoluteHardwareValueMatcher;
 import com.bitwig.extension.controller.api.BooleanValue;
-import com.bitwig.extension.controller.api.HardwareAction;
 import com.bitwig.extension.controller.api.HardwareActionBindable;
-import com.bitwig.extension.controller.api.HardwareActionBinding;
 import com.bitwig.extension.controller.api.HardwareActionMatcher;
 import com.bitwig.extension.controller.api.HardwareBinding;
 import com.bitwig.extension.controller.api.HardwareButton;
@@ -20,6 +18,7 @@ import com.bitwig.extension.controller.api.RelativeHardwareKnob;
 import com.bitwig.extension.controller.api.RelativeHardwareValueMatcher;
 import com.bitwig.extension.controller.api.SettableRangedValue;
 import com.github.jhorology.bitwig.utils.Hook;
+import com.github.jhorology.bitwig.utils.Hook.Subscription;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -46,11 +45,12 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
   private final List<Runnable> releasedHandlers;
   private final List<Consumer<Double>> absValueHandlers;
   private final List<HardwareBinding> bindings;
-  private final List<Hook.Subscription> subscriptions;
-  private final List<Hook.Subscription> internalSubscriptions;
-  //
+  private final List<Subscription<?>> subscriptions;
+  private final List<Subscription<?>> internalSubscriptions;
+
   private double absValue;
   private boolean pressed;
+  private L ledState;
 
   protected MidiOut midiOut;
 
@@ -80,30 +80,6 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
 
   /** An instance of MultiStateHardwareLight. */
   protected MultiStateHardwareLight led;
-
-  private static class ConditionalActionBindable implements HardwareActionBindable {
-    private final Supplier<Boolean> condition;
-    private final HardwareActionBindable bindable;
-
-    private ConditionalActionBindable(
-        HardwareActionBindable bindable, Supplier<Boolean> condition) {
-      this.condition = condition;
-      this.bindable = bindable;
-    }
-
-    @Override
-    public HardwareActionBinding addBinding(HardwareAction action) {
-      return bindable.addBinding(action);
-    }
-
-    @Override
-    public void invoke() {
-      LOG.info("#### bindable action invoked condition={}", condition.get());
-      if (condition.get()) {
-        bindable.invoke();
-      }
-    }
-  }
 
   /** Constructor. */
   protected Control() {
@@ -192,7 +168,7 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
     }
     if (isRelativeEncoder()) {
       LOG.trace("[{}] control is relative encoder.", name());
-      this.relKnob = createRelativeKnob(surface, midiIn, button);
+      this.relKnob = createRelativeKnob(surface, midiIn);
     }
     if (isLED()) {
       LOG.trace("[{}] control is LED.", name());
@@ -509,7 +485,8 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
       throw new UnsupportedOperationException("[" + name() + "] Control doesn't have LED.");
     }
     subscriptions.add(
-        Hook.subscribeBoolean(value, v -> led.state().setValue(v ? onState : offState)));
+        Hook.subscribe(
+            value, (Consumer<Boolean>) v -> led.state().setValue(v ? onState : offState)));
     return (T) this;
   }
 
@@ -532,12 +509,21 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
   }
 
   /**
-   * Returns a current encoder absolute-value of this control.
+   * Returns a current absolute-value of encoder.
    *
    * @return last received value(normalized 0.0-1.0).
    */
   public double getAbsValue() {
     return absValue;
+  }
+
+  /**
+   * Returns a current state of LED.
+   *
+   * @return last received value(normalized 0.0-1.0).
+   */
+  public L getLedState() {
+    return ledState;
   }
 
   /** clear all handlers and binding. */
@@ -607,36 +593,37 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
     btn.pressedAction().setActionMatcher(createPressedActionMatcher(midiIn));
     btn.releasedAction().setActionMatcher(createReleasedActionMatcher(midiIn));
     internalSubscriptions.add(
-        Hook.subscribeBoolean(
+        Hook.subscribe(
             btn.isPressed(),
-            pressed -> {
-              this.pressed = pressed;
-              (pressed ? pressedHandlers : releasedHandlers).forEach(Runnable::run);
-            }));
+            (Consumer<Boolean>)
+                pressed -> {
+                  this.pressed = pressed;
+                  (pressed ? pressedHandlers : releasedHandlers).forEach(Runnable::run);
+                }));
     return btn;
   }
 
   private AbsoluteHardwareKnob createAbsoluteKnob(HardwareSurface surface, MidiIn midiIn) {
     AbsoluteHardwareKnob knob = surface.createAbsoluteHardwareKnob(name() + ABSOLUTE_SUFFIX);
-    if (knob != null) {
+    if (button != null) {
       knob.setHardwareButton(button);
     }
     knob.setAdjustValueMatcher(createAbsValueMatcher(midiIn));
     internalSubscriptions.add(
-        Hook.subscribeDouble(
+        Hook.subscribe(
             knob.value(),
-            value -> {
-              absValue = value;
-              absValueHandlers.forEach(h -> h.accept(value));
-            }));
+            (Consumer<Double>)
+                value -> {
+                  absValue = value;
+                  absValueHandlers.forEach(h -> h.accept(value));
+                }));
     return knob;
   }
 
-  private RelativeHardwareKnob createRelativeKnob(
-      HardwareSurface surface, MidiIn midiIn, HardwareButton btn) {
+  private RelativeHardwareKnob createRelativeKnob(HardwareSurface surface, MidiIn midiIn) {
     RelativeHardwareKnob knob = surface.createRelativeHardwareKnob(name() + RELATIVE_SUFFIX);
-    if (btn != null) {
-      knob.setHardwareButton(btn);
+    if (button != null) {
+      knob.setHardwareButton(button);
     }
     knob.setAdjustValueMatcher(createRelValueMatcher(midiIn));
     return knob;
@@ -645,7 +632,12 @@ public abstract class Control<T extends Control<T, L>, L extends InternalHardwar
   @SuppressWarnings("unchecked")
   private MultiStateHardwareLight createLed(HardwareSurface surface) {
     MultiStateHardwareLight led = surface.createMultiStateHardwareLight(name() + LED_SUFFIX);
-    led.state().onUpdateHardware(state -> sendLedState((L) state));
+    led.state()
+        .onUpdateHardware(
+            state -> {
+              ledState = (L) state;
+              sendLedState((L) state);
+            });
     // TODO blinking
     return led;
   }

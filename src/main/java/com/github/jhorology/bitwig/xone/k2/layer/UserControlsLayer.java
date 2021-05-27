@@ -1,8 +1,5 @@
 package com.github.jhorology.bitwig.xone.k2.layer;
 
-import static com.github.jhorology.bitwig.xone.k2.SharedModules.*;
-import static com.github.jhorology.bitwig.xone.k2.XoneK2Control.*;
-
 import com.bitwig.extension.controller.api.ControllerHost;
 
 public class UserControlsLayer extends AbstractLayer {

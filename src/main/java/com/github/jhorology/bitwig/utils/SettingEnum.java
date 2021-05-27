@@ -2,32 +2,45 @@ package com.github.jhorology.bitwig.utils;
 
 import com.bitwig.extension.controller.api.EnumDefinition;
 import com.bitwig.extension.controller.api.EnumValueDefinition;
+import java.lang.reflect.ParameterizedType;
 
 /**
  * An interface for enumerize EnumValueDefinition
  *
- * @param <E> enum type.
+ * @param <E> enum type. (recursive generic type)
  */
+@SuppressWarnings("unchecked")
 public interface SettingEnum<E extends Enum<E> & EnumValueDefinition> extends EnumValueDefinition {
+
   /**
    * Returns a concrete enum type.
    *
    * @return this enum type.
    */
-  Class<E> getEnumType();
+  default Class<E> getEnumType() {
+    // TODO always correct ?
+    return (Class<E>)
+        ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+  }
 
-  @SuppressWarnings("unchecked")
+  @Override
   default int getValueIndex() {
     return ((E) this).ordinal();
   }
 
-  @SuppressWarnings("unchecked")
+  @Override
   default String getId() {
     return ((E) this).name();
   }
 
-  @SuppressWarnings("unchecked")
+  @Override
+  default String getDisplayName() {
+    return getId();
+  }
+
+  @Override
   default String getLimitedDisplayName(int maxLength) {
+    // TODO Will Bitwig Studio do something?
     return ((E) this).getDisplayName();
   }
 
@@ -36,11 +49,12 @@ public interface SettingEnum<E extends Enum<E> & EnumValueDefinition> extends En
    *
    * @since API version 11
    */
+  @Override
   default EnumDefinition enumDefinition() {
     return new EnumDefinition() {
       private Class<E> enumType;
 
-      private EnumDefinition enumType(Class<E> enumType) {
+      private EnumDefinition of(Class<E> enumType) {
         this.enumType = enumType;
         return this;
       }
@@ -78,6 +92,6 @@ public interface SettingEnum<E extends Enum<E> & EnumValueDefinition> extends En
       public EnumValueDefinition valueDefinitionFor(String id) {
         return Enum.valueOf(enumType, id);
       }
-    }.enumType(getEnumType());
+    }.of(getEnumType());
   }
 }

@@ -10,11 +10,10 @@ import com.bitwig.extension.controller.api.Transport;
 import com.bitwig.extension.controller.api.UserControlBank;
 import com.github.jhorology.bitwig.xone.k2.Modes.Nav1Mode;
 import com.github.jhorology.bitwig.xone.k2.Modes.Nav2Mode;
-
 import java.util.HashMap;
 import java.util.Map;
 
-public class SharedModules {
+public class Modules {
   public static Transport TRANSPORT;
   public static CursorTrack CURSOR_TRACK;
   public static TrackBank TRACK_BANK;
